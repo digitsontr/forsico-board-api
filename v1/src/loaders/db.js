@@ -1,7 +1,8 @@
-const Mongoose = require("mongoose");
+const Mongoose = require('mongoose');
+const KeyVaultClient = require('./keyvault')
 
 const connectDB = async () => {
-  await Mongoose.connect(process.env.CON_STRING);
+  await Mongoose.connect(await KeyVaultClient.getSecretValue('BoardApi-CONSTRING'));
 };
 
 module.exports = {
