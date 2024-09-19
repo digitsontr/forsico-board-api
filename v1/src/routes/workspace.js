@@ -1,17 +1,25 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const validate = require('../middlewares/validate');
-const validations = require('../validations/workspace');
-const { getAllWorkspaces, getWorkspaceById, createWorkspace, updateWorkspace, deleteWorkspace } = require('../controllers/workspace');
+const validate = require("../middlewares/validate");
+const validations = require("../validations/workspace");
+const {
+  getAllWorkspaces,
+  getWorkspaceById,
+  createWorkspace,
+  updateWorkspace,
+  deleteWorkspace,
+} = require("../controllers/workspace");
 
-router.get('/', getAllWorkspaces);
+router.get("/", getAllWorkspaces);
 
-router.get('/:workspaceid', getWorkspaceById);
+router.get("/getworkspacesofuser", getAllWorkspaces);
 
-router.route('/').post(validate(validations.createValidation), createWorkspace);
+router.get("/:workspaceid", getWorkspaceById);
 
-router.put('/:workspaceid', updateWorkspace);
+router.route("/").post(validate(validations.createValidation), createWorkspace);
 
-router.delete('/:workspaceid', deleteWorkspace);
+router.put("/:workspaceid", updateWorkspace);
+
+router.delete("/:workspaceid", deleteWorkspace);
 
 module.exports = router;
