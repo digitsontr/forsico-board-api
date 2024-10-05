@@ -1,22 +1,25 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
-const SubTask = require('./subtask');
 
-const TaskSchema = new Schema({
+//TODO Add checklists and taskfeature
+const TaskSchema = new Schema(
+  {
     id: String,
     name: String,
     description: String,
-    board_id: { type: String, ref: 'Board' }, 
+    board_id: { type: String, ref: "Board" },
     media: [String],
-    assignee: String,
+    assignee: { type: String, ref: "User" },
     due_date: Date,
-    owner_id: String,
+    owner_id: { type: String, ref: "User" },
     priority: Number,
     entrance_date: Date,
-    subtasks: [SubTask.schema]
-});
+    list_id: { type: String, ref: "Board" },
+    parent_task: { type: String, ref: "Task" },
+    subtasks: [{ type: String, ref: "Task" }],
+    workspaceId: { type: String, required: true },
+  },
+  { versionKey: false, timestamps: true }
+);
 
-module.exports = {
-    model: mongoose.model('Task', TaskSchema),
-    schema: TaskSchema
-} 
+module.exports = mongoose.model("Task", TaskSchema);

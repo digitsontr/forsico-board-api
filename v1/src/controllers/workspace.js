@@ -25,7 +25,7 @@ const getWorkspacesOfUser = async (req, res) => {
 };
 
 const getWorkspaceById = async (req, res) => {
-  const response = await service.getWorkspaceById(req.params.workspaceid);
+  const response = await service.getWorkspaceById(req.workspaceId);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -36,8 +36,7 @@ const getWorkspaceById = async (req, res) => {
 };
 
 const createWorkspace = async (req, res) => {
-  const response = await service.createWorkspace(req.body, req.user);
-  console.log(req.user);
+  const response = await service.createWorkspace(req.body, req.user, req.accessToken);
 
   if (response.status) {
     res.status(httpStatus.CREATED).send(response);
@@ -49,7 +48,7 @@ const createWorkspace = async (req, res) => {
 
 const updateWorkspace = async (req, res) => {
   const response = await service.updateWorkspace(
-    req.params.workspaceid,
+    req.workspaceId,
     req.body
   );
 
@@ -62,7 +61,7 @@ const updateWorkspace = async (req, res) => {
 };
 
 const deleteWorkspace = async (req, res) => {
-  const response = await service.deleteWorkspace(req.params.workspaceid);
+  const response = await service.deleteWorkspace(req.workspaceId);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);

@@ -5,7 +5,7 @@ const validate = (schema) => (req, res, next) => {
     const {
         value,
         error
-    } = schema.validate(req.body);
+    } = schema.validate({ ...req.params, ...req.body });
 
     if(error){
         const response = ApiResponse.fail();

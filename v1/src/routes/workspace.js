@@ -1,25 +1,48 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const validate = require("../middlewares/validate");
-const validations = require("../validations/workspace");
+const validate = require('../middlewares/validate');
+const validations = require('../validations/workspace');
+const authorize = require('../middlewares/authorize');
+const permissons = require('../scripts/helpers/permissons');
 const {
-  getAllWorkspaces,
   getWorkspaceById,
+  getWorkspacesOfUser,
   createWorkspace,
   updateWorkspace,
   deleteWorkspace,
-} = require("../controllers/workspace");
+} = require('../controllers/workspace');
+const verifyWorkspace = require('../middlewares/verifyWorkspace');
 
-router.get("/", getAllWorkspaces);
+router.get(
+  '/getworkspacesofuser',
+  authorize(),
+  getWorkspacesOfUser
+);
 
-router.get("/getworkspacesofuser", getAllWorkspaces);
+router.get(
+  '/',
+  authorize(),
+  verifyWorkspace(),
+  getWorkspaceById
+);
 
-router.get("/:workspaceid", getWorkspaceById);
+router
+  .route('/')
+  .post(validate(validations.createValidation), authorize(), createWorkspace);
 
-router.route("/").post(validate(validations.createValidation), createWorkspace);
+router.put(
+  '/',
+  verifyWorkspace(),
+  validate(validations.updateValidation),
+  authorize(permissons.CAN_UPDATE_WORKSPACE),
+  updateWorkspace
+);
 
-router.put("/:workspaceid", updateWorkspace);
-
-router.delete("/:workspaceid", deleteWorkspace);
+router.delete(
+  '/',
+  verifyWorkspace(),
+  authorize(permissons.CAN_DELETE_WORKSPACE),
+  deleteWorkspace
+);
 
 module.exports = router;

@@ -1,16 +1,17 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
-const List = require('./list');
 
-const BoardSchema = new Schema({
+const BoardSchema = new Schema(
+  {
     id: String,
     name: String,
     description: String,
-    media: [String],
-    lists: [List.schema]
-});
+    creator: String,
+    workspaceId: { type: String, required: true }, 
+    lists: [{ type: Schema.Types.ObjectId, ref: "List" }],
+    members: [{ type: Schema.Types.ObjectId, ref: "User" }],
+  },
+  { versionKey: false, timestamps: true }
+);
 
-module.exports = {
-    model: mongoose.model('Board', BoardSchema),
-    schema: BoardSchema
-} 
+module.exports = mongoose.model("Board", BoardSchema)

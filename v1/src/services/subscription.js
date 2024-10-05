@@ -6,5 +6,5 @@ const checkIsUserSubscriptionValid = async (subscriptionId) => {
 };
 
 module.exports = {
-    checcheckIsUserSubscriptionValidkUserSubscription
+    checkIsUserSubscriptionValid
 }

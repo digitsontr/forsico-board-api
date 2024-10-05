@@ -26,9 +26,12 @@ const verifyToken = (req, res, next) => {
     });
 
     req.user = decoded;
+    req.accessToken = token;
 
     next();
   } catch (err) {
+    console.log("ERR", err);
+
     return res
       .status(FORBIDDEN)
       .json(ApiResponse.fail([new ErrorDetail("User has not authorized!")]));

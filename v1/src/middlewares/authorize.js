@@ -1,20 +1,35 @@
-const userService = require('../services/user');
-const subscriptionService = require('../services/subscription');
+const userService = require("../services/user");
+const subscriptionService = require("../services/subscription");
 const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
 const { FORBIDDEN } = require("http-status");
 
 const authorize =
-  (userId, workspaceId, subscriptionId, permisson) => async (req, res, next) => {
-    const isSubscriptionValid = await subscriptionService.checkIsUserSubscriptionValid(subscriptionId);
+  (permisson) =>
+  async (req, res, next) => {
+    const isSubscriptionValid =
+      await subscriptionService.checkIsUserSubscriptionValid(req.params.subscriptionId);
+    if (!isSubscriptionValid)
+      res
+        .status(FORBIDDEN)
+        .json(
+          ApiResponse.fail([new ErrorDetail("User subscription is not valid!")])
+        );
 
-    if(!isSubscriptionValid) res.status(FORBIDDEN).json(ApiResponse.fail([new ErrorDetail("User subscription is not valid!")])); 
-    
-    const permissons = await userService.fetchUserPermissons(userId, workspaceId);
+    if ((permisson || "") === "") {
+      next();
+      return;
+    }
+
+    const permissons = await userService.fetchUserPermissons(
+      req.user.sub,
+      req.workspaceId,
+      req.accessToken
+    );
 
     if (
       permissons.filter((perm) => {
         return perm.includes(permisson);
-      }).length > 0
+      }).length > 0 || permissons.includes('RoleManager_Workspace_' + req.workspaceId)
     ) {
       next();
     } else {
