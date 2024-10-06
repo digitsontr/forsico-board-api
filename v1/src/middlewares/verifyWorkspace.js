@@ -33,7 +33,6 @@ const userHasAccessToWorkspace = async (userId, workspaceId) => {
   try {
     const user = await UserService.getUserById(userId);
     if (!user) {
-      console.log("User not found");
       return false;
     }
 

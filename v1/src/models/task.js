@@ -18,6 +18,7 @@ const TaskSchema = new Schema(
     parent_task: { type: String, ref: "Task" },
     subtasks: [{ type: String, ref: "Task" }],
     workspaceId: { type: String, required: true },
+    status_id: { type: Schema.Types.ObjectId, ref: "TaskStatus" },
   },
   { versionKey: false, timestamps: true }
 );

@@ -3,7 +3,7 @@ const router = express.Router();
 const validate = require('../middlewares/validate');
 const validations = require('../validations/workspace');
 const authorize = require('../middlewares/authorize');
-const permissons = require('../scripts/helpers/permissons');
+const permissons = require('../scripts/helpers/permissions');
 const {
   getWorkspaceById,
   getWorkspacesOfUser,

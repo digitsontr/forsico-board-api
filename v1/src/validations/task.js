@@ -20,6 +20,7 @@ const updateTaskValidation = Joi.object({
   assignee: Joi.string().optional().min(24).max(24),
   due_date: Joi.date().optional(),
   priority: Joi.number().optional().min(0).max(5),
+  status_id: Joi.string().optional().min(24).max(24),
 });
 
 const getTasksOfBoardValidation = Joi.object({

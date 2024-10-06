@@ -23,6 +23,18 @@ const getTaskById = async (req, res) => {
   res.status(httpStatus.BAD_REQUEST).send(response);
 };
 
+const getStatusById = async (req, res) => {
+  const response = await service.getStatusById(req.params.statusid);
+
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
+    return;
+  }
+
+  res.status(httpStatus.BAD_REQUEST).send(response);
+};
+
+
 const createTask = async (req, res) => {
   const response = await service.createTask(req.workspaceId, req.body);
 
@@ -59,6 +71,7 @@ const deleteTask = async (req, res) => {
 module.exports = {
   getTasksOfBoard,
   getTaskById,
+  getStatusById,
   createTask,
   updateTask,
   deleteTask,

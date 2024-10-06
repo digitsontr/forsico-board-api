@@ -4,7 +4,7 @@ const validate = require("../middlewares/validate");
 const validations = require("../validations/board");
 const authorize = require("../middlewares/authorize");
 const verifyWorkspace = require("../middlewares/verifyWorkspace");
-const permissons = require("../scripts/helpers/permissons");
+const permissons = require("../scripts/helpers/permissions");
 const {
   getBoardsOfWorkspace,
   getBoardById,

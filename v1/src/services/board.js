@@ -1,9 +1,11 @@
 const Board = require("../models/board");
 const Workspace = require("../models/workspace");
+const User = require("../models/user");
 const mongoose = require("mongoose");
 const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
 const Logger = require("../scripts/logger/board");
 const userService = require("../services/user");
+const taskStatusService = require("../services/taskstatus");
 
 const getBoardsOfWorkspace = async (workspaceId) => {
   try {
@@ -31,7 +33,7 @@ const getBoardById = async (id) => {
   }
 };
 
-const createBoard = async (workspaceId, boardData) => {
+const createBoard = async (workspaceId, userId, boardData) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -49,6 +51,17 @@ const createBoard = async (workspaceId, boardData) => {
     });
 
     const savedBoard = await boardModel.save({ session });
+    const user = await User.findOne({ id: userId }, "_id");
+
+    const statusResponse = await taskStatusService.createDefaultTaskStatus(
+      savedBoard._id,
+      workspaceId,
+      user._id
+    );
+
+    if (!statusResponse.status) {
+      throw new Error("Failed to create default task status");
+    }
 
     workspace.boards.push(savedBoard._id);
     await workspace.save({ session });
@@ -114,7 +127,6 @@ const addMemberToBoard = async (boardId, userData) => {
 
     const user = await userService.getUserById(userData.userId);
 
-    console.log("USER: ", user);
     if (!user) {
       return ApiResponse.fail([new ErrorDetail("User not found")]);
     }

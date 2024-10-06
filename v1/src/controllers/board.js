@@ -24,7 +24,11 @@ const getBoardById = async (req, res) => {
 };
 
 const createBoard = async (req, res) => {
-  const response = await service.createBoard(req.workspaceId,req.body);
+  const response = await service.createBoard(
+    req.workspaceId,
+    req.user.sub,
+    req.body
+  );
 
   if (response.status) {
     res.status(httpStatus.CREATED).send(response);
@@ -46,10 +50,7 @@ const addMemberToBoard = async (req, res) => {
 };
 
 const updateBoard = async (req, res) => {
-  const response = await service.updateBoard(
-    req.params.boardid,
-    req.body
-  );
+  const response = await service.updateBoard(req.params.boardid, req.body);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -71,10 +72,10 @@ const deleteBoard = async (req, res) => {
 };
 
 module.exports = {
-    getBoardsOfWorkspace,
-    getBoardById,
-    createBoard,
-    updateBoard,
-    deleteBoard,
-    addMemberToBoard
+  getBoardsOfWorkspace,
+  getBoardById,
+  createBoard,
+  updateBoard,
+  deleteBoard,
+  addMemberToBoard,
 };

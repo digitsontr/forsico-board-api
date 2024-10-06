@@ -4,7 +4,7 @@ const validate = require("../middlewares/validate");
 const validations = require("../validations/task");
 const authorize = require("../middlewares/authorize");
 const verifyWorkspace = require("../middlewares/verifyWorkspace");
-const permissions = require("../scripts/helpers/permissons");
+const permissions = require("../scripts/helpers/permissions");
 const {
   getTasksOfBoard,
   getTaskById,

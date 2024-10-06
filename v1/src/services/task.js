@@ -1,4 +1,5 @@
 const Task = require("../models/task");
+const TaskStatus = require("../models/taskstatus");
 const List = require("../models/list");
 const Workspace = require("../models/workspace");
 const User = require("../models/user");
@@ -47,6 +48,16 @@ const createTask = async (workspaceId, taskData) => {
 
     const user = await User.findOne({ id: taskData.owner_id }, "_id");
     const assignedUser = await User.findOne({ id: taskData.assignee }, "_id");
+
+    const defaultStatus = await TaskStatus.findOne({
+      name: "Filling Description",
+      board_id: taskData.board_id,
+    });
+
+    if (!defaultStatus) {
+      throw new Error("Default task status not found");
+    }
+
     const taskModel = new Task({
       name: taskData.name,
       description: taskData.description || "",
@@ -58,6 +69,7 @@ const createTask = async (workspaceId, taskData) => {
       entrance_date: taskData.entrance_date || Date.now(),
       workspaceId: workspaceId,
       list_id: taskData.list_id || null,
+      status_id: defaultStatus._id
     });
 
     if (taskData.parent_task) {
