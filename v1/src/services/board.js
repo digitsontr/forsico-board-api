@@ -15,7 +15,7 @@ const getBoardsOfWorkspace = async (workspaceId) => {
     );
     return ApiResponse.success(boards);
   } catch (e) {
-    console.log(e);
+    console.error(e);
     return ApiResponse.fail([new ErrorDetail("Failed to retrieve boards")]);
   }
 };
@@ -28,7 +28,7 @@ const getBoardById = async (id) => {
     }
     return ApiResponse.success(board);
   } catch (e) {
-    console.log("ERR: ", e);
+    console.error("ERR: ", e);
     return ApiResponse.fail([new ErrorDetail("Failed to retrieve board")]);
   }
 };
@@ -38,7 +38,11 @@ const createBoard = async (workspaceId, userId, boardData) => {
   session.startTransaction();
 
   try {
-    const workspace = await Workspace.findById(workspaceId);
+
+    const [workspace, user] = await Promise.all([
+      Workspace.findById(workspaceId, "_id boards"),
+      User.findOne({ id: userId }, "_id"),
+    ]);
 
     if (!workspace) {
       throw new Error("Workspace not found");
@@ -50,22 +54,28 @@ const createBoard = async (workspaceId, userId, boardData) => {
       workspaceId: workspaceId,
     });
 
-    const savedBoard = await boardModel.save({ session });
-    const user = await User.findOne({ id: userId }, "_id");
+    const savedBoardPromise = boardModel.save({ session });
 
-    const statusResponse = await taskStatusService.createDefaultTaskStatus(
-      savedBoard._id,
+  
+    const taskStatusPromise = taskStatusService.createDefaultTaskStatus(
+      boardModel._id,
       workspaceId,
       user._id
     );
+
+    const [savedBoard, statusResponse] = await Promise.all([
+      savedBoardPromise,
+      taskStatusPromise,
+    ]);
 
     if (!statusResponse.status) {
       throw new Error("Failed to create default task status");
     }
 
     workspace.boards.push(savedBoard._id);
-    await workspace.save({ session });
 
+    await workspace.save({ session });
+    
     await session.commitTransaction();
     session.endSession();
 
@@ -118,7 +128,6 @@ const deleteBoard = async (id) => {
 
 const addMemberToBoard = async (boardId, userData) => {
   try {
-    console.log("addMemberToBoard");
     const board = await Board.findById(boardId);
 
     if (!board) {
@@ -142,7 +151,7 @@ const addMemberToBoard = async (boardId, userData) => {
 
     return ApiResponse.success(board);
   } catch (e) {
-    console.log(e);
+    console.error(e);
     return ApiResponse.fail([new ErrorDetail("Failed to add member to board")]);
   }
 };

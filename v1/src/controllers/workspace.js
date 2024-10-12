@@ -9,7 +9,6 @@ const getAllWorkspaces = async (req, res) => {
     return;
   }
 
-  console.log(req.user);
   res.status(httpStatus.BAD_REQUEST).send(response);
 };
 

@@ -34,7 +34,7 @@ router
   .post(
     verifyWorkspace(),
     validate(validations.createValidation),
-    authorize(),
+    authorize("CAN_CREATE_BOARD"),
     createBoard
   );
 

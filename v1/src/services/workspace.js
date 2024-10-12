@@ -54,60 +54,46 @@ const createWorkspace = async (workspaceData, user, accessToken) => {
       members: [],
     });
 
-    const savedWorkspace = await workspaceModel.save({
-      session,
-    });
+    const savedWorkspacePromise = workspaceModel.save({ session });
+    let existingUserPromise = User.findOne({ id: user.sub }).session(session);
 
-    let existingUser = await User.findOne({ id: user.sub }).session(session);
+    const [savedWorkspace, existingUser] = await Promise.all([
+      savedWorkspacePromise,
+      existingUserPromise,
+    ]);
 
+    let userToSave;
     if (!existingUser) {
-      existingUser = new User({
+      userToSave = new User({
         id: user.sub,
         firstname: user.name,
         lastname: user.family_name,
         profilePicture: user.picture,
-        workspaces: [savedWorkspace._id]
+        workspaces: [savedWorkspace._id],
       });
-
-      await existingUser.save({ session });
     } else {
       existingUser.workspaces.push(savedWorkspace._id);
-      await existingUser.save({ session });
+      userToSave = existingUser;
     }
 
-    savedWorkspace.members.push(existingUser._id);
-    
-    await savedWorkspace.save({ session });
- 
-    const authApiResponse = await saveWorkspaceToAuthApi(
-      savedWorkspace._id,
-      savedWorkspace.name,
-      accessToken
-    );
+    savedWorkspace.members.push(userToSave._id);
 
-
-    if (!authApiResponse.status) {
-      Logger.log({
-        level: "error",
-        message: `AUTH API ERROR: ${authApiResponse.errors
-          ?.map((error) => {
-            return error.message;
-          })
-          .join(",")}`,
-      });
-      throw new Error("Failed to save workspace to auth API");
-    }
+    await Promise.all([
+      userToSave.save({ session }),
+      savedWorkspace.save({ session }),
+    ]);
 
     await session.commitTransaction();
+
+    await saveWorkspaceToAuthApi(savedWorkspace._id, savedWorkspace.name, accessToken);
+    
     session.endSession();
 
     return ApiResponse.success(savedWorkspace);
   } catch (e) {
     await session.abortTransaction();
     session.endSession();
-
-    console.log(e);
-
+    console.error(e);
     return ApiResponse.fail([new ErrorDetail("Failed to create workspace")]);
   }
 };

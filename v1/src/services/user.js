@@ -1,6 +1,8 @@
 const axios = require("axios");
 const baseUrl = process.env.AUTH_API_BASE_URL;
 const User = require("../models/user");
+const redisClient = require("../config/redisClient");
+
 
 const getUserById = async (userId) => {
   try {
@@ -13,6 +15,13 @@ const getUserById = async (userId) => {
 };
 
 const fetchUserPermissons = async (userId, workspaceId, accessToken) => {
+  const cacheKey = `user_roles_${userId}_${workspaceId}`;
+  const cachedPermissions = await redisClient.get(cacheKey);
+
+  if (cachedPermissions) {
+    return cachedPermissions.split(',');
+  }
+
   let data = JSON.stringify({
     userId: userId,
     workspaceId: workspaceId,
@@ -36,7 +45,7 @@ const fetchUserPermissons = async (userId, workspaceId, accessToken) => {
       return response?.data?.data || [];
     })
     .catch((error, res) => {
-      console.log("ERORR RES", error.response);
+      console.error("ERORR RES", error.response);
       return [];
     });
 };

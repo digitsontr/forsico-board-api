@@ -15,7 +15,7 @@ const getTasksOfBoard = async (boardId, workspaceId) => {
     );
     return ApiResponse.success(tasks);
   } catch (e) {
-    console.log(e);
+    console.error(e);
     return ApiResponse.fail([new ErrorDetail("Failed to retrieve tasks")]);
   }
 };
@@ -31,7 +31,7 @@ const getTaskById = async (id) => {
     }
     return ApiResponse.success(task);
   } catch (e) {
-    console.log("ERR: ", e);
+    console.error("ERR: ", e);
     return ApiResponse.fail([new ErrorDetail("Failed to retrieve task")]);
   }
 };

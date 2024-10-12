@@ -30,7 +30,7 @@ const verifyToken = (req, res, next) => {
 
     next();
   } catch (err) {
-    console.log("ERR", err);
+    console.error("ERR", err);
 
     return res
       .status(FORBIDDEN)
