@@ -2,7 +2,7 @@ const httpStatus = require("http-status");
 const service = require("../services/list");
 
 const getListsOfBoard = async (req, res) => {
-  const response = await service.getListsOfBoard(req.params.boardid);
+  const response = await service.getListsOfBoard(req.params.boardId);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);

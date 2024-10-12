@@ -16,7 +16,7 @@ const {
 const upload = multer();
 
 router.get(
-  "/task/:taskid/comments",
+  "/task/:taskId/comments",
   verifyWorkspace(),
   authorize(),
   validate(validations.getCommentsForTaskValidation),
@@ -24,7 +24,7 @@ router.get(
 );
 
 router.get(
-  "/:commentid",
+  "/:commentId",
   verifyWorkspace(),
   authorize(),
   validate(validations.getCommentByIdValidation),
@@ -32,7 +32,7 @@ router.get(
 );
 
 router.post(
-  "/task/:taskid/comment",
+  "/task/:taskId/comment",
   verifyWorkspace(),
   authorize(),
   upload.array("files"),
@@ -41,7 +41,7 @@ router.post(
 );
 
 router.put(
-  "/:commentid",
+  "/:commentId",
   verifyWorkspace(),
   authorize(),
   upload.array("files"),
@@ -50,7 +50,7 @@ router.put(
 );
 
 router.delete(
-  "/:commentid",
+  "/:commentId",
   verifyWorkspace(),
   authorize(),
   validate(validations.deleteCommentValidation),

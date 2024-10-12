@@ -1,5 +1,5 @@
 const Task = require("../models/task");
-const TaskStatus = require("../models/taskstatus");
+const TaskStatus = require("../models/taskStatus");
 const List = require("../models/list");
 const Workspace = require("../models/workspace");
 const User = require("../models/user");
@@ -9,10 +9,15 @@ const Logger = require("../scripts/logger/task");
 
 const getTasksOfBoard = async (boardId, workspaceId) => {
   try {
-    const tasks = await Task.find({ board_id: boardId, workspaceId }).populate(
-      "assignee",
-      "firstname lastname profilePicture"
-    );
+    const tasks = await Task.find({ boardId: boardId, workspaceId })
+      .populate("assignee", "firstName lastName profilePicture")
+      .populate({
+        path: "comments",
+        populate: {
+          path: "userId",
+          select: "firstName lastName profilePicture",
+        },
+      });
     return ApiResponse.success(tasks);
   } catch (e) {
     console.error(e);
@@ -22,10 +27,15 @@ const getTasksOfBoard = async (boardId, workspaceId) => {
 
 const getTaskById = async (id) => {
   try {
-    const task = await Task.findById(id).populate(
-      "assignee",
-      "firstname lastname profilePicture"
-    );
+    const task = await Task.findById(id)
+      .populate("assignee", "firstName lastName profilePicture")
+      .populate({
+        path: "comments",
+        populate: {
+          path: "userId",
+          select: "firstName lastName profilePicture",
+        },
+      });
     if (!task) {
       return ApiResponse.fail([new ErrorDetail("Task not found")]);
     }
@@ -46,12 +56,12 @@ const createTask = async (workspaceId, taskData) => {
       throw new Error("Workspace not found");
     }
 
-    const user = await User.findOne({ id: taskData.owner_id }, "_id");
+    const user = await User.findOne({ id: taskData.ownerId }, "_id");
     const assignedUser = await User.findOne({ id: taskData.assignee }, "_id");
 
     const defaultStatus = await TaskStatus.findOne({
       name: "Filling Description",
-      board_id: taskData.board_id,
+      boardId: taskData.boardId,
     });
 
     if (!defaultStatus) {
@@ -61,28 +71,28 @@ const createTask = async (workspaceId, taskData) => {
     const taskModel = new Task({
       name: taskData.name,
       description: taskData.description || "",
-      board_id: taskData.board_id,
+      boardId: taskData.boardId,
       assignee: assignedUser?._id || null,
-      due_date: taskData.due_date || null,
-      owner_id: user?._id,
+      dueDate: taskData.dueDate || null,
+      ownerId: user?._id,
       priority: taskData.priority || 0,
-      entrance_date: taskData.entrance_date || Date.now(),
+      entranceDate: taskData.entranceDate || Date.now(),
       workspaceId: workspaceId,
-      list_id: taskData.list_id || null,
-      status_id: defaultStatus._id
+      listId: taskData.listId || null,
+      statusId: defaultStatus._id,
     });
 
-    if (taskData.parent_task) {
-      const parentTask = await Task.findById(taskData.parent_task);
+    if (taskData.parentTask) {
+      const parentTask = await Task.findById(taskData.parentTask);
       if (parentTask) {
         parentTask.subtasks.push(taskModel._id);
         await parentTask.save({ session });
       }
-      taskModel.parent_task = taskData.parent_task;
+      taskModel.parentTask = taskData.parentTask;
     }
 
-    if (taskData.list_id) {
-      const list = await List.findById(taskData.list_id);
+    if (taskData.listId) {
+      const list = await List.findById(taskData.listId);
       if (list) {
         list.tasks.push(taskModel._id);
         await list.save({ session });
@@ -117,20 +127,20 @@ const updateTask = async (id, updateData) => {
       ]);
     }
 
-    if (updateData.list_id) {
+    if (updateData.listId) {
       const oldTask = await Task.findById(id);
       if (
         oldTask &&
-        oldTask.list_id &&
-        oldTask.list_id !== updateData.list_id
+        oldTask.listId &&
+        oldTask.listId !== updateData.listId
       ) {
-        const oldList = await List.findById(oldTask.list_id);
+        const oldList = await List.findById(oldTask.listId);
         if (oldList) {
           oldList.tasks.pull(oldTask._id);
           await oldList.save();
         }
 
-        const newList = await List.findById(updateData.list_id);
+        const newList = await List.findById(updateData.listId);
         if (newList) {
           newList.tasks.push(oldTask._id);
           await newList.save();
@@ -153,14 +163,14 @@ const deleteTask = async (id) => {
       ]);
     }
 
-    if (deletedTask.parent_task) {
-      await Task.findByIdAndUpdate(deletedTask.parent_task, {
+    if (deletedTask.parentTask) {
+      await Task.findByIdAndUpdate(deletedTask.parentTask, {
         $pull: { subtasks: deletedTask._id },
       });
     }
 
-    if (deletedTask.list_id) {
-      await List.findByIdAndUpdate(deletedTask.list_id, {
+    if (deletedTask.listId) {
+      await List.findByIdAndUpdate(deletedTask.listId, {
         $pull: { tasks: deletedTask._id },
       });
     }

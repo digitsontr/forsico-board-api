@@ -5,11 +5,11 @@ const TaskStatusSchema = new Schema(
   {
     name: { type: String, required: true },
     color: { type: String, default: "#f2f2f2" },
-    board_id: { type: Schema.Types.ObjectId, ref: "Board", required: true },
-    workspace_id: { type: Schema.Types.ObjectId, ref: "Workspace", required: true },
-    created_by: { type: Schema.Types.ObjectId, ref: "User", required: true }, 
-    allowed_transitions: [{ type: Schema.Types.ObjectId, ref: "TaskStatus" }], 
-    list_id: { type: Schema.Types.ObjectId, ref: "List" },
+    boardId: { type: Schema.Types.ObjectId, ref: "Board", required: true },
+    workspaceId: { type: Schema.Types.ObjectId, ref: "Workspace", required: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true }, 
+    allowedTransitions: [{ type: Schema.Types.ObjectId, ref: "TaskStatus" }], 
+    listId: { type: Schema.Types.ObjectId, ref: "List" },
   },
   { versionKey: false, timestamps: true }
 );

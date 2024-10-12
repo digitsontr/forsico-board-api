@@ -28,6 +28,6 @@ app.listen(process.env.APP_PORT, () => {
   app.use("/board", BoardRoutes);
   app.use("/list", ListRoutes);
   app.use("/task", TaskRoutes);
-  app.use("/taskstatus", TaskStatusRoutes);
+  app.use("/taskStatus", TaskStatusRoutes);
   app.use("/comment", CommentRoutes);
 });

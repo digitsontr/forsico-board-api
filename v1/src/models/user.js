@@ -4,8 +4,8 @@ const Schema = mongoose.Schema;
 const UserSchema = new Schema(
   {
     id: String,
-    firstname: String,
-    lastname: String,
+    firstName: String,
+    lastName: String,
     profilePicture: String,
     workspaces: [{ type: Schema.Types.ObjectId, ref: "Workspace" }],
   },

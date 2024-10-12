@@ -13,7 +13,7 @@ const {
   deleteList,
 } = require("../controllers/list");
 
-router.get("/getlistsofboard/:boardid", authorize(), getListsOfBoard);
+router.get("/getlistsofboard/:boardId", authorize(), getListsOfBoard);
 
 router.get(
   "/:listid",

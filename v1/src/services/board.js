@@ -5,13 +5,13 @@ const mongoose = require("mongoose");
 const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
 const Logger = require("../scripts/logger/board");
 const userService = require("../services/user");
-const taskStatusService = require("../services/taskstatus");
+const taskStatusService = require("../services/taskStatus");
 
 const getBoardsOfWorkspace = async (workspaceId) => {
   try {
     const boards = await Board.find({ workspaceId: workspaceId }).populate(
       "members",
-      "firstname lastname id profilepicture"
+      "firstName lastname id profilePicture"
     );
     return ApiResponse.success(boards);
   } catch (e) {

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const validate = require("../middlewares/validate");
-const validations = require("../validations/taskstatus");
+const validations = require("../validations/taskStatus");
 const authorize = require("../middlewares/authorize");
 const verifyWorkspace = require("../middlewares/verifyWorkspace");
 const permissions = require("../scripts/helpers/permissions");
@@ -11,10 +11,10 @@ const {
   getStatusById,
   updateTaskStatus,
   deleteTaskStatus,
-} = require("../controllers/taskstatus");
+} = require("../controllers/taskStatus");
 
 router.get(
-  "/board/:boardid",
+  "/board/:boardId",
   verifyWorkspace(),
   authorize(),
   validate(validations.getStatusesOfBoardValidation),
@@ -22,7 +22,7 @@ router.get(
 );
 
 router.get(
-  "/:statusid",
+  "/:statusId",
   verifyWorkspace(),
   validate(validations.getStatusByIdValidation),
   authorize(),
@@ -38,7 +38,7 @@ router.post(
 );
 
 router.put(
-  "/:statusid",
+  "/:statusId",
   verifyWorkspace(),
   validate(validations.updateTaskStatusValidation),
   authorize(permissions.CAN_UPDATE_TASK_STATUS),
@@ -46,7 +46,7 @@ router.put(
 );
 
 router.delete(
-  "/:statusid",
+  "/:statusId",
   verifyWorkspace(),
   validate(validations.getDeleteTaskStatusValidation),
   authorize(permissions.CAN_DELETE_TASK_STATUS),

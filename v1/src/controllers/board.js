@@ -13,7 +13,7 @@ const getBoardsOfWorkspace = async (req, res) => {
 };
 
 const getBoardById = async (req, res) => {
-  const response = await service.getBoardById(req.params.boardid);
+  const response = await service.getBoardById(req.params.boardId);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -39,7 +39,7 @@ const createBoard = async (req, res) => {
 };
 
 const addMemberToBoard = async (req, res) => {
-  const response = await service.addMemberToBoard(req.params.boardid, req.body);
+  const response = await service.addMemberToBoard(req.params.boardId, req.body);
 
   if (response.status) {
     res.status(httpStatus.CREATED).send(response);
@@ -50,7 +50,7 @@ const addMemberToBoard = async (req, res) => {
 };
 
 const updateBoard = async (req, res) => {
-  const response = await service.updateBoard(req.params.boardid, req.body);
+  const response = await service.updateBoard(req.params.boardId, req.body);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -61,7 +61,7 @@ const updateBoard = async (req, res) => {
 };
 
 const deleteBoard = async (req, res) => {
-  const response = await service.deleteBoard(req.params.boardid);
+  const response = await service.deleteBoard(req.params.boardId);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);

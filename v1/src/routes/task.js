@@ -14,7 +14,7 @@ const {
 } = require("../controllers/task");
 
 router.get(
-  "/gettasksofboard/:boardid",
+  "/getTasksOfBoard/:boardId",
   verifyWorkspace(),
   authorize(),
   validate(validations.getTasksOfBoardValidation),
@@ -22,7 +22,7 @@ router.get(
 );
 
 router.get(
-  "/:taskid",
+  "/:taskId",
   validate(validations.getTaskByIdValidation),
   authorize(),
   getTaskById
@@ -37,7 +37,7 @@ router.post(
 );
 
 router.put(
-  "/:taskid",
+  "/:taskId",
   verifyWorkspace(),
   validate(validations.updateTaskValidation),
   authorize(permissions.CAN_UPDATE_TASK),
@@ -45,7 +45,7 @@ router.put(
 );
 
 router.delete(
-  "/:taskid",
+  "/:taskId",
   verifyWorkspace(),
   validate(validations.deleteTaskValidation),
   authorize(permissions.CAN_DELETE_TASK),

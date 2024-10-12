@@ -3,7 +3,6 @@ const User = require("../models/user");
 const axios = require("axios");
 const mongoose = require("mongoose");
 const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
-const Logger = require("../scripts/logger/workspace");
 
 const getAllWorkspaces = async () => {
   try {
@@ -19,9 +18,9 @@ const getWorkspacesOfUser = async (user) => {
     const workspaces = await Workspace.find({
       owner: user.sub,
     }).populate({
-      path : 'boards',
-      populate: {path: 'members'}
-    })
+      path: "boards",
+      populate: { path: "members" },
+    });
     return ApiResponse.success(workspaces);
   } catch (e) {
     return ApiResponse.fail([new ErrorDetail("Failed to retrieve workspaces")]);
@@ -30,7 +29,10 @@ const getWorkspacesOfUser = async (user) => {
 
 const getWorkspaceById = async (id) => {
   try {
-    const workspace = await Workspace.findById(id).populate('members');
+    const workspace = await Workspace.findById(id)
+      .populate("members", "firstName lastName profilePicture")
+      .populate("owner", "firstName lastName profilePicture")
+      .populate("boards", "_id name description");
 
     if (!workspace) {
       return ApiResponse.fail([new ErrorDetail("Workspace not found")]);
@@ -50,7 +52,6 @@ const createWorkspace = async (workspaceData, user, accessToken) => {
     const workspaceModel = new Workspace({
       name: workspaceData.name,
       description: workspaceData.description || "",
-      owner: user.sub,
       members: [],
     });
 
@@ -66,8 +67,8 @@ const createWorkspace = async (workspaceData, user, accessToken) => {
     if (!existingUser) {
       userToSave = new User({
         id: user.sub,
-        firstname: user.name,
-        lastname: user.family_name,
+        firstName: user.name,
+        lastName: user.family_name,
         profilePicture: user.picture,
         workspaces: [savedWorkspace._id],
       });
@@ -77,6 +78,7 @@ const createWorkspace = async (workspaceData, user, accessToken) => {
     }
 
     savedWorkspace.members.push(userToSave._id);
+    savedWorkspace.owner = userToSave._id;
 
     await Promise.all([
       userToSave.save({ session }),
@@ -85,8 +87,12 @@ const createWorkspace = async (workspaceData, user, accessToken) => {
 
     await session.commitTransaction();
 
-    await saveWorkspaceToAuthApi(savedWorkspace._id, savedWorkspace.name, accessToken);
-    
+    await saveWorkspaceToAuthApi(
+      savedWorkspace._id,
+      savedWorkspace.name,
+      accessToken
+    );
+
     session.endSession();
 
     return ApiResponse.success(savedWorkspace);

@@ -5,9 +5,9 @@ const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
 
 const getCommentsForTask = async (taskId) => {
   try {
-    const comments = await Comment.find({ task_id: taskId }).populate(
-      "user_id",
-      "firstname lastname profilePicture"
+    const comments = await Comment.find({ taskId: taskId }).populate(
+      "userId",
+      "firstName lastName profilePicture"
     );
     return ApiResponse.success(comments);
   } catch (e) {
@@ -19,8 +19,8 @@ const getCommentsForTask = async (taskId) => {
 const getCommentById = async (commentId) => {
   try {
     const comment = await Comment.findById(commentId).populate(
-      "user_id",
-      "firstname lastname profilePicture"
+      "userId",
+      "firstName lastName profilePicture"
     );
     if (!comment) {
       return ApiResponse.fail([new ErrorDetail("Comment not found")]);
@@ -32,10 +32,10 @@ const getCommentById = async (commentId) => {
   }
 };
 
-const createComment = async (workspaceId, userId, commentData) => {
+const createComment = async (workspaceId, userId, taskId, commentData) => {
   try {
     const user = await User.findOne({ id: userId }, "_id");
-    const task = await Task.findById(commentData.taskid);
+    const task = await Task.findById(taskId);
 
     if (!task) {
       return ApiResponse.fail([new ErrorDetail("Task not found")]);
@@ -44,12 +44,18 @@ const createComment = async (workspaceId, userId, commentData) => {
     const comment = new Comment({
       content: commentData.content,
       files: commentData.fileUrls || [],
-      task_id: commentData.taskid,
-      user_id: user._id,
+      task: commentData.task,
+      userId: user._id,
+      taskId: taskId,
       workspaceId,
     });
 
     const savedComment = await comment.save();
+
+    await Task.findByIdAndUpdate(task, {
+      $push: { comments: savedComment._id },
+    });
+
     return ApiResponse.success(savedComment);
   } catch (e) {
     console.error("Error creating comment:", e);
@@ -62,10 +68,8 @@ const updateComment = async (commentId, userId, updateData) => {
     const user = await User.findOne({ id: userId }, "_id");
     const comment = await Comment.findOne({
       _id: commentId,
-      user_id: user._id,
+      userId: user._id,
     });
-
-    console.log("COMMENT:", comment);
 
     if (!comment) {
       return ApiResponse.fail([
@@ -90,7 +94,7 @@ const deleteComment = async (commentId, userId) => {
     const user = await User.findOne({ id: userId }, "_id");
     const deletedComment = await Comment.findOneAndDelete({
       _id: commentId,
-      user_id: user._id,
+      userId: user._id,
     });
 
     if (!deletedComment) {

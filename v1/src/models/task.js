@@ -1,24 +1,24 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
-//TODO Add checklists and taskfeature
 const TaskSchema = new Schema(
   {
     id: String,
     name: String,
     description: String,
-    board_id: { type: String, ref: "Board" },
+    boardId: { type: String, ref: "Board" },
     media: [String],
     assignee: { type: String, ref: "User" },
-    due_date: Date,
-    owner_id: { type: String, ref: "User" },
+    dueDate: Date,
+    ownerId: { type: String, ref: "User" },
     priority: Number,
-    entrance_date: Date,
-    list_id: { type: String, ref: "Board" },
-    parent_task: { type: String, ref: "Task" },
+    entranceDate: Date,
+    listId: { type: String, ref: "Board" },
+    parentTask: { type: String, ref: "Task" },
     subtasks: [{ type: String, ref: "Task" }],
     workspaceId: { type: String, required: true },
-    status_id: { type: Schema.Types.ObjectId, ref: "TaskStatus" },
+    statusId: { type: Schema.Types.ObjectId, ref: "TaskStatus" },
+    comments: [{ type: Schema.Types.ObjectId, ref: "Comment" }] 
   },
   { versionKey: false, timestamps: true }
 );

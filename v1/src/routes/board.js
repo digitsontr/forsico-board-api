@@ -23,7 +23,7 @@ router.get(
 );
 
 router.get(
-  "/:boardid",
+  "/:boardId",
   validate(validations.getByIdValidation),
   authorize(),
   getBoardById
@@ -39,7 +39,7 @@ router
   );
 
 router.put(
-  "/:boardid",
+  "/:boardId",
   verifyWorkspace(),
   validate(validations.updateValidation),
   authorize(permissons.CAN_UPDATE_BOARD),
@@ -47,7 +47,7 @@ router.put(
 );
 
 router.delete(
-  "/:boardid",
+  "/:boardId",
   verifyWorkspace(),
   validate(validations.deleteValidation),
   authorize(permissons.CAN_DELETE_BOARD),
@@ -55,7 +55,7 @@ router.delete(
 );
 
 router
-  .route("/addMemberToBoard/:boardid")
+  .route("/addMemberToBoard/:boardId")
   .post(
     verifyWorkspace(),
     validate(validations.addMemberToBoardValidation),

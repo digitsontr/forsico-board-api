@@ -1,8 +1,8 @@
 const httpStatus = require("http-status");
-const service = require("../services/taskstatus");
+const service = require("../services/taskStatus");
 
 const getStatusesOfBoard = async (req, res) => {
-  const response = await service.getStatusesOfBoard(req.params.boardid);
+  const response = await service.getStatusesOfBoard(req.params.boardId);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -28,7 +28,7 @@ const createTaskStatus = async (req, res) => {
 };
 
 const getStatusById = async (req, res) => {
-  const response = await service.getStatusById(req.params.statusid);
+  const response = await service.getStatusById(req.params.statusId);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -40,7 +40,7 @@ const getStatusById = async (req, res) => {
 
 const updateTaskStatus = async (req, res) => {
   const response = await service.updateTaskStatus(
-    req.params.statusid,
+    req.params.statusId,
     req.body
   );
 
@@ -53,7 +53,7 @@ const updateTaskStatus = async (req, res) => {
 };
 
 const deleteTaskStatus = async (req, res) => {
-  const response = await service.deleteTaskStatus(req.params.statusid);
+  const response = await service.deleteTaskStatus(req.params.statusId);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);

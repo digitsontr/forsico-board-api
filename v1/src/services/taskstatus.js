@@ -1,6 +1,6 @@
-const TaskStatus = require("../models/taskstatus");
+const TaskStatus = require("../models/taskStatus");
 const User = require("../models/user");
-const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
+const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 
 
 const createDefaultTaskStatus = async (boardId, workspaceId, ownerId) => {
@@ -8,10 +8,10 @@ const createDefaultTaskStatus = async (boardId, workspaceId, ownerId) => {
       const defaultStatus = new TaskStatus({
         name: "Filling Description",
         color: "#f2f2f2",
-        board_id: boardId,
-        workspace_id: workspaceId,
-        created_by: ownerId,
-        allowed_transitions: [],
+        boardId: boardId,
+        workspaceId: workspaceId,
+        createdBy: ownerId,
+        allowedTransitions: [],
       });
   
       const savedStatus = await defaultStatus.save();
@@ -28,11 +28,11 @@ const createTaskStatus = async (userId, workspaceId, statusData) => {
     const taskStatus = new TaskStatus({
       name: statusData.name,
       color: statusData.color || "#f2f2f2",
-      board_id: statusData.board_id,
-      workspace_id: workspaceId,
-      created_by: user._id,
-      allowed_transitions: statusData.allowed_transitions || [],
-      list_id: statusData.list_id || null,
+      boardId: statusData.boardId,
+      workspaceId: workspaceId,
+      createdBy: user._id,
+      allowedTransitions: statusData.allowedTransitions || [],
+      listId: statusData.listId || null,
     });
 
     const savedStatus = await taskStatus.save();
@@ -45,7 +45,7 @@ const createTaskStatus = async (userId, workspaceId, statusData) => {
 
 const getStatusesOfBoard = async (boardId) => {
   try {
-    const statuses = await TaskStatus.find({ board_id: boardId });
+    const statuses = await TaskStatus.find({ boardId: boardId });
     return ApiResponse.success(statuses);
   } catch (e) {
     console.error("Error fetching statuses for board:", e);
