@@ -3,4 +3,5 @@ module.exports.BoardRoutes = require("./board");
 module.exports.ListRoutes = require("./list");
 module.exports.TaskRoutes = require("./task");
 module.exports.TaskStatusRoutes = require("./taskStatus");
-module.exports.CommentRoutes= require("./comment");
+module.exports.CommentRoutes = require("./comment");
+module.exports.ChecklistRoutes = require("./checklist");

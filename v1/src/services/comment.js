@@ -76,7 +76,7 @@ const updateComment = async (commentId, userId, updateData) => {
         new ErrorDetail("Comment not found or update failed"),
       ]);
     }
-    
+
     comment.content = updateData.content;
     comment.files = updateData.fileUrls || [];
     comment.updatedAt = Date.now();
@@ -90,21 +90,48 @@ const updateComment = async (commentId, userId, updateData) => {
 };
 
 const deleteComment = async (commentId, userId) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const user = await User.findOne({ id: userId }, "_id");
-    const deletedComment = await Comment.findOneAndDelete({
-      _id: commentId,
-      userId: user._id,
-    });
+    const deletedComment = await Comment.findOneAndDelete(
+      {
+        _id: commentId,
+        userId: user._id,
+      },
+      { session }
+    );
 
     if (!deletedComment) {
+      await session.abortTransaction();
+      session.endSession();
       return ApiResponse.fail([
         new ErrorDetail("Comment not found or delete failed"),
       ]);
     }
 
+    const task = await Task.findOneAndUpdate(
+      { _id: deletedComment.taskId },
+      { $pull: { comments: deletedComment._id } },
+      { session, new: true }
+    );
+
+    if (!task) {
+      await session.abortTransaction();
+      session.endSession();
+      return ApiResponse.fail([
+        new ErrorDetail("Task not found, but comment deleted"),
+      ]);
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
     return ApiResponse.success(deletedComment);
   } catch (e) {
+    await session.abortTransaction();
+    session.endSession();
     console.error("Error deleting comment:", e);
     return ApiResponse.fail([new ErrorDetail("Failed to delete comment")]);
   }

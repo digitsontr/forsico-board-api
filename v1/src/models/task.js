@@ -18,7 +18,8 @@ const TaskSchema = new Schema(
     subtasks: [{ type: String, ref: "Task" }],
     workspaceId: { type: String, required: true },
     statusId: { type: Schema.Types.ObjectId, ref: "TaskStatus" },
-    comments: [{ type: Schema.Types.ObjectId, ref: "Comment" }] 
+    comments: [{ type: Schema.Types.ObjectId, ref: "Comment" }],
+    checklists: [{ type: Schema.Types.ObjectId, ref: "Checklist" }] 
   },
   { versionKey: false, timestamps: true }
 );
