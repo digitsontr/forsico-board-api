@@ -27,15 +27,12 @@ const getTasksOfBoard = async (boardId, workspaceId) => {
 
 const getTaskById = async (id) => {
   try {
-    const task = await Task.findById(id)
+    const task = await Task.findById(
+      id,
+      "_id name description boardId assignee dueDate ownerId priority entranceDate listId statusId createdAt updatedAt"
+    )
       .populate("assignee", "firstName lastName profilePicture")
-      .populate({
-        path: "comments",
-        populate: {
-          path: "userId",
-          select: "firstName lastName profilePicture",
-        },
-      });
+      .populate("ownerId", "firstName lastName profilePicture");
     if (!task) {
       return ApiResponse.fail([new ErrorDetail("Task not found")]);
     }
@@ -129,11 +126,7 @@ const updateTask = async (id, updateData) => {
 
     if (updateData.listId) {
       const oldTask = await Task.findById(id);
-      if (
-        oldTask &&
-        oldTask.listId &&
-        oldTask.listId !== updateData.listId
-      ) {
+      if (oldTask && oldTask.listId && oldTask.listId !== updateData.listId) {
         const oldList = await List.findById(oldTask.listId);
         if (oldList) {
           oldList.tasks.pull(oldTask._id);
