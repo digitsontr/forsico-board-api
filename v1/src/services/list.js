@@ -6,6 +6,8 @@ const {
   ErrorDetail
 } = require("../models/apiresponse");
 const Logger = require("../scripts/logger/list");
+const ExceptionLogger = require("../scripts/logger/exception");
+
 
 const getListsOfBoard = async (boardId) => {
   try {

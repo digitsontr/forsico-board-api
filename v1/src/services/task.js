@@ -6,6 +6,7 @@ const User = require("../models/user");
 const mongoose = require("mongoose");
 const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
 const Logger = require("../scripts/logger/task");
+const ExceptionLogger = require("../scripts/logger/exception");
 
 const getTasksOfBoard = async (boardId, workspaceId) => {
   try {

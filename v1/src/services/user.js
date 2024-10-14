@@ -2,7 +2,7 @@ const axios = require("axios");
 const baseUrl = process.env.AUTH_API_BASE_URL;
 const User = require("../models/user");
 const redisClient = require("../config/redisClient");
-
+const ExceptionLogger = require("../scripts/logger/exception");
 
 const getUserById = async (userId) => {
   try {

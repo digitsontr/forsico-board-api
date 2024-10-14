@@ -1,5 +1,6 @@
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { v4: uuidv4 } = require("uuid");
+const ExceptionLogger = require("../scripts/logger/exception");
 
 const AZURE_STORAGE_CONNECTION_STRING =
   process.env.AZURE_STORAGE_CONNECTION_STRING; //TODO Create new blob storage for this attachments

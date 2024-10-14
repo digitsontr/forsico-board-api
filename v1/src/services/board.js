@@ -3,9 +3,10 @@ const Workspace = require("../models/workspace");
 const User = require("../models/user");
 const mongoose = require("mongoose");
 const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
-const Logger = require("../scripts/logger/board");
 const userService = require("../services/user");
 const taskStatusService = require("../services/taskStatus");
+const ExceptionLogger = require("../scripts/logger/exception");
+const Logger = require("../scripts/logger/board");
 
 const getBoardsOfWorkspace = async (workspaceId) => {
   try {
@@ -15,7 +16,7 @@ const getBoardsOfWorkspace = async (workspaceId) => {
     );
     return ApiResponse.success(boards);
   } catch (e) {
-    console.error(e);
+    Logger.error(e);
     return ApiResponse.fail([new ErrorDetail("Failed to retrieve boards")]);
   }
 };
@@ -24,11 +25,12 @@ const getBoardById = async (id) => {
   try {
     const board = await Board.findById(id);
     if (!board) {
+      Logger.error(`Board not found: boardId=${ id }`)
       return ApiResponse.fail([new ErrorDetail("Board not found")]);
     }
     return ApiResponse.success(board);
   } catch (e) {
-    console.error("ERR: ", e);
+    Logger.error(e);
     return ApiResponse.fail([new ErrorDetail("Failed to retrieve board")]);
   }
 };
@@ -38,13 +40,13 @@ const createBoard = async (workspaceId, userId, boardData) => {
   session.startTransaction();
 
   try {
-
     const [workspace, user] = await Promise.all([
       Workspace.findById(workspaceId, "_id boards"),
       User.findOne({ id: userId }, "_id"),
     ]);
 
     if (!workspace) {
+      Logger.error(`Workspace not found workspaceId=${workspaceId}`);
       throw new Error("Workspace not found");
     }
 
@@ -56,7 +58,6 @@ const createBoard = async (workspaceId, userId, boardData) => {
 
     const savedBoardPromise = boardModel.save({ session });
 
-  
     const taskStatusPromise = taskStatusService.createDefaultTaskStatus(
       boardModel._id,
       workspaceId,
@@ -75,7 +76,7 @@ const createBoard = async (workspaceId, userId, boardData) => {
     workspace.boards.push(savedBoard._id);
 
     await workspace.save({ session });
-    
+
     await session.commitTransaction();
     session.endSession();
 
@@ -83,10 +84,7 @@ const createBoard = async (workspaceId, userId, boardData) => {
   } catch (e) {
     await session.abortTransaction();
     session.endSession();
-    Logger.log({
-      level: "error",
-      message: `Error creating board: ${e.message}`,
-    });
+
     return ApiResponse.fail([new ErrorDetail("Failed to create board")]);
   }
 };

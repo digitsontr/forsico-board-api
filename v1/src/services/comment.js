@@ -2,6 +2,8 @@ const Comment = require("../models/comment");
 const Task = require("../models/task");
 const User = require("../models/user");
 const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
+const ExceptionLogger = require("../scripts/logger/exception");
+const Logger = require("../scripts/logger/comment");
 
 const getCommentsForTask = async (taskId) => {
   try {
