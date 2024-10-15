@@ -22,8 +22,8 @@ app.use(express.json({ limit: "10mb" }));
 app.use(helmet());
 app.use(authenticate);
 
-app.listen(process.env.APP_PORT, () => {
-  console.info(`Server works on ${3000} port`);
+app.listen(process.env.PORT || process.env.APP_PORT, () => {
+  console.info(`Server works`);
 
   app.use("/workspace", WorkspaceRoutes);
   app.use("/board", BoardRoutes);
