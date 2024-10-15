@@ -3,6 +3,9 @@ const User = require("../models/user");
 const axios = require("axios");
 const mongoose = require("mongoose");
 const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
+const { getCache, setCache, delCache } = require("../scripts/helpers/cache");
+const ExceptionLogger = require("../scripts/logger/exception");
+const Logger = require("../scripts/logger/workspace");
 
 const getAllWorkspaces = async () => {
   try {
@@ -12,17 +15,30 @@ const getAllWorkspaces = async () => {
     return ApiResponse.fail([new ErrorDetail("Failed to retrieve workspaces")]);
   }
 };
+const getWorkspacesOfUserCacheKey = (userId) => `workspaces:user:${userId}`;
 
 const getWorkspacesOfUser = async (user) => {
+  const cacheKey = getWorkspacesOfUserCacheKey(user.sub);
+  const cachedWorkspaces = await getCache(cacheKey);
+
+  if (cachedWorkspaces) {
+    console.log(cachedWorkspaces);
+    Logger.info(`User got workspace from cache userid: ${user.sub}`);
+    return ApiResponse.success(cachedWorkspaces);
+  }
+
   try {
+    const userEntity = await User.findOne({ id: user.sub });
+    console.log(userEntity._id);
     const workspaces = await Workspace.find({
-      owner: user.sub,
-    }).populate({
-      path: "boards",
-      populate: { path: "members" },
-    });
+      owner: userEntity._id,
+    }).populate("members", "id firstName lastName profilePicture");
+
+    await setCache(cacheKey, workspaces);
+
     return ApiResponse.success(workspaces);
   } catch (e) {
+    console.error(e);
     return ApiResponse.fail([new ErrorDetail("Failed to retrieve workspaces")]);
   }
 };
@@ -55,13 +71,9 @@ const createWorkspace = async (workspaceData, user, accessToken) => {
       members: [],
     });
 
-    const savedWorkspacePromise = workspaceModel.save({ session });
-    let existingUserPromise = User.findOne({ id: user.sub }).session(session);
+    const savedWorkspace = await workspaceModel.save({ session });
 
-    const [savedWorkspace, existingUser] = await Promise.all([
-      savedWorkspacePromise,
-      existingUserPromise,
-    ]);
+    let existingUser = await User.findOne({ id: user.sub }).session(session);
 
     let userToSave;
     if (!existingUser) {
@@ -77,15 +89,15 @@ const createWorkspace = async (workspaceData, user, accessToken) => {
       userToSave = existingUser;
     }
 
+    await userToSave.save({ session });
+
     savedWorkspace.members.push(userToSave._id);
     savedWorkspace.owner = userToSave._id;
 
-    await Promise.all([
-      userToSave.save({ session }),
-      savedWorkspace.save({ session }),
-    ]);
+    await savedWorkspace.save({ session });
 
     await session.commitTransaction();
+    session.endSession();
 
     await saveWorkspaceToAuthApi(
       savedWorkspace._id,
@@ -93,14 +105,15 @@ const createWorkspace = async (workspaceData, user, accessToken) => {
       accessToken
     );
 
-    session.endSession();
+    delCache(getWorkspacesOfUserCacheKey(user.sub));
 
     return ApiResponse.success(savedWorkspace);
   } catch (e) {
     await session.abortTransaction();
-    session.endSession();
     console.error(e);
     return ApiResponse.fail([new ErrorDetail("Failed to create workspace")]);
+  } finally {
+    session.endSession();
   }
 };
 
@@ -120,7 +133,7 @@ const updateWorkspace = async (id, updateData) => {
   }
 };
 
-const deleteWorkspace = async (id) => {
+const deleteWorkspace = async (id, user) => {
   try {
     const deletedWorkspace = await Workspace.findByIdAndDelete(id);
     if (!deletedWorkspace) {
@@ -128,6 +141,9 @@ const deleteWorkspace = async (id) => {
         new ErrorDetail("Workspace not found or delete failed"),
       ]);
     }
+
+    delCache(getWorkspacesOfUserCacheKey(user.sub));
+    
     return ApiResponse.success(deletedWorkspace);
   } catch (e) {
     return ApiResponse.fail([new ErrorDetail("Failed to delete workspace")]);

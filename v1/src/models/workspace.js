@@ -7,8 +7,8 @@ const WorkspaceSchema = new Schema(
     name: String,
     description: String,
     boards: [{ type: Schema.Types.ObjectId, ref: "Board" }],
-    members: [{ type: Schema.Types.ObjectId, ref: 'User' }], 
-    owner: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    members: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    owner: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
   { versionKey: false, timestamps: true }
 );

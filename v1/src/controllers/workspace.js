@@ -60,7 +60,7 @@ const updateWorkspace = async (req, res) => {
 };
 
 const deleteWorkspace = async (req, res) => {
-  const response = await service.deleteWorkspace(req.workspaceId);
+  const response = await service.deleteWorkspace(req.workspaceId, req.user);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
