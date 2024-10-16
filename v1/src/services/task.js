@@ -58,7 +58,7 @@ const createTask = async (workspaceId, taskData) => {
     const assignedUser = await User.findOne({ id: taskData.assignee }, "_id");
 
     const defaultStatus = await TaskStatus.findOne({
-      name: "Filling Description",
+      name: "Backlog",
       boardId: taskData.boardId,
     });
 
@@ -98,10 +98,13 @@ const createTask = async (workspaceId, taskData) => {
     }
 
     const savedTask = await taskModel.save({ session });
+    const populatedTask = await Task
+      .findById(savedTask._id)
+      .populate("assignee", "firstName lastName email profilePicture").session(session);
+
     await session.commitTransaction();
     session.endSession();
-
-    return ApiResponse.success(savedTask);
+    return ApiResponse.success(populatedTask);
   } catch (e) {
     await session.abortTransaction();
     session.endSession();

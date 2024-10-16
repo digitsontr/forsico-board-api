@@ -9,6 +9,7 @@ const {
   getBoardsOfWorkspace,
   getBoardById,
   createBoard,
+  getBoardMembers,
   updateBoard,
   deleteBoard,
   addMemberToBoard
@@ -27,6 +28,13 @@ router.get(
   validate(validations.getByIdValidation),
   authorize(),
   getBoardById
+);
+
+router.get(
+  "/:boardId/members",
+  validate(validations.getByIdValidation),
+  authorize(),
+  getBoardMembers
 );
 
 router

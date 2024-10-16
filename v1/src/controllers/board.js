@@ -12,6 +12,17 @@ const getBoardsOfWorkspace = async (req, res) => {
   res.status(httpStatus.BAD_REQUEST).send(response);
 };
 
+const getBoardMembers = async (req, res) => {
+  const response = await service.getBoardMembers(req.boardId);
+
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
+    return;
+  }
+
+  res.status(httpStatus.BAD_REQUEST).send(response);
+};
+
 const getBoardById = async (req, res) => {
   const response = await service.getBoardById(req.params.boardId);
 
@@ -73,6 +84,7 @@ const deleteBoard = async (req, res) => {
 
 module.exports = {
   getBoardsOfWorkspace,
+  getBoardMembers,
   getBoardById,
   createBoard,
   updateBoard,

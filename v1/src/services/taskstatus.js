@@ -8,7 +8,7 @@ const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const createDefaultTaskStatus = async (boardId, workspaceId, ownerId) => {
     try {
       const defaultStatus = new TaskStatus({
-        name: "Filling Description",
+        name: "Backlog",
         color: "#f2f2f2",
         boardId: boardId,
         workspaceId: workspaceId,

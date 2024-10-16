@@ -1,0 +1,8 @@
+{
+    "appService.zipIgnorePattern": [
+        "node_modules{,/**}",
+        ".vscode{,/**}"
+    ],
+    "appService.defaultWebAppToDeploy": "/subscriptions/2759f0f0-b0b3-41b8-8bdd-d4e4317e8f83/resourceGroups/forsico-board-rg/providers/Microsoft.Web/sites/forsico-board-api",
+    "appService.deploySubpath": "."
+}
