@@ -8,7 +8,6 @@ const logAndPublishNotificationValidation = Joi.object({
 });
 
 const getNotificationsValidation = Joi.object({
-  workspaceId: Joi.string().required().min(24).max(24),
   boardIds: Joi.array().items(Joi.string().min(24).max(24)).required(),
 });
 
@@ -20,14 +19,9 @@ const bulkUpdateNotificationStatusValidation = Joi.object({
   notificationIds: Joi.array().items(Joi.string().min(24).max(24)).required(),
 });
 
-const deleteNotificationValidation = Joi.object({
-  notificationId: Joi.string().required().min(24).max(24),
-});
-
 module.exports = {
   logAndPublishNotificationValidation,
   getNotificationsValidation,
   updateNotificationStatusValidation,
   bulkUpdateNotificationStatusValidation,
-  deleteNotificationValidation,
 };

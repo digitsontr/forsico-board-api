@@ -8,11 +8,10 @@ const validations = require("../validations/notification");
 const {
   getNotifications,
   updateNotificationStatus,
-  deleteNotification,
   bulkUpdateNotificationStatus,
 } = require("../controllers/notification");
 
-router.post(
+router.get(
   "/",
   validate(validations.getNotificationsValidation),
   verifyWorkspace(),
@@ -22,23 +21,15 @@ router.post(
 
 router.patch(
   "/:notificationId/read",
-  validate(validations.updateStatusValidation),
+  validate(validations.updateNotificationStatusValidation),
   verifyWorkspace(),
   authorize(),
   updateNotificationStatus
 );
 
-router.delete(
-  "/:notificationId",
-  validate(validations.deleteValidation),
-  verifyWorkspace(),
-  authorize(permissions.CAN_DELETE_NOTIFICATION),
-  deleteNotification
-);
-
 router.patch(
-  "/bulk-read",
-  validate(validations.bulkUpdateValidation),
+  "/bulkRead",
+  validate(validations.bulkUpdateNotificationStatusValidation),
   verifyWorkspace(),
   authorize(),
   bulkUpdateNotificationStatus

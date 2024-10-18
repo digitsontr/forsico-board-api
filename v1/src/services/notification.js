@@ -2,6 +2,7 @@ const Notification = require("../models/notification");
 const redis = require("../config/redisClient");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const { htmlToText } = require("html-to-text");
+const User = require("../models/user");
 
 const logAndPublishNotification = async (model, action, data) => {
   try {
@@ -46,7 +47,7 @@ const getNotifications = async (workspaceId, boardIds) => {
     const notifications = await Notification.find({
       workspaceId,
       boardId: { $in: boardIds },
-    }).sort({ createdAt: -1 });
+    }).sort({ createdAt: -1 }).populate("readBy", "_id id");
 
     return ApiResponse.success(notifications);
   } catch (error) {
@@ -58,13 +59,14 @@ const getNotifications = async (workspaceId, boardIds) => {
 const updateNotificationStatus = async (notificationId, userId) => {
   try {
     const notification = await Notification.findById(notificationId);
+    const user = await User.findOne({ id: userId }, "_id");
 
     if (!notification) {
       return ApiResponse.fail([new ErrorDetail("Notification not found")]);
     }
 
-    if (!notification.readBy.includes(userId)) {
-      notification.readBy.push(userId);
+    if (!notification.readBy.includes(user._id)) {
+      notification.readBy.push(user._id);
       await notification.save();
     }
 
@@ -77,9 +79,10 @@ const updateNotificationStatus = async (notificationId, userId) => {
 
 const bulkUpdateNotificationStatus = async (notificationIds, userId) => {
   try {
+    const user = await User.findOne({ id: userId }, "_id");
     const result = await Notification.updateMany(
       { _id: { $in: notificationIds } },
-      { $addToSet: { readBy: userId } }
+      { $addToSet: { readBy: user._id } }
     );
 
     if (result.modifiedCount === 0) {
