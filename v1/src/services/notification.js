@@ -20,6 +20,8 @@ const logAndPublishNotification = async (model, action, data) => {
     redis.publish(
       `workspace:${data.workspaceId}:board:${data.boardId}`,
       JSON.stringify({
+        action: action,
+        model: model,
         workspaceId: data.workspaceId,
         boardId: data.boardId,
         taskId: data.taskId || "",
