@@ -1,7 +1,7 @@
 const { UNAUTHORIZED, FORBIDDEN } = require("http-status");
 const UserService = require("../services/user");
 const WorkspaceService = require("../services/workspace");
-const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
+const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 
 const verifyWorkspace = () => async (req, res, next) => {
   const workspaceId = req.headers["x-workspace-id"];

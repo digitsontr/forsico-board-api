@@ -17,7 +17,8 @@ const getCommentByIdValidation = Joi.object({
 const updateCommentValidation = Joi.object({
   commentId: Joi.string().required().min(24).max(24),
   content: Joi.string().required().min(1),
-  fileUrls: Joi.array().items(Joi.string()).optional()
+  fileUrls: Joi.array().items(Joi.string()).optional(),
+  taskId: Joi.string().required().min(24).max(24),
 });
 
 const deleteCommentValidation = Joi.object({

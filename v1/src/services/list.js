@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const {
   ApiResponse,
   ErrorDetail
-} = require("../models/apiresponse");
+} = require("../models/apiResponse");
 const Logger = require("../scripts/logger/list");
 const ExceptionLogger = require("../scripts/logger/exception");
 

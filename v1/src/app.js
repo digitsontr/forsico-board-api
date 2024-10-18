@@ -11,6 +11,7 @@ const {
   TaskStatusRoutes,
   CommentRoutes,
   ChecklistRoutes,
+  NotificationRoutes,
 } = require("./routes");
 
 config();
@@ -34,4 +35,5 @@ app.listen(PORT, () => {
   app.use("/taskStatus", TaskStatusRoutes);
   app.use("/comment", CommentRoutes);
   app.use("/checklist", ChecklistRoutes);
+  app.use("/notification", NotificationRoutes);
 });

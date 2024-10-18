@@ -3,7 +3,7 @@ const Workspace = require("../models/workspace");
 const User = require("../models/user");
 const List = require("../models/list");
 const mongoose = require("mongoose");
-const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
+const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const userService = require("../services/user");
 const taskStatusService = require("../services/taskStatus");
 const ExceptionLogger = require("../scripts/logger/exception");
@@ -71,7 +71,7 @@ const createBoard = async (workspaceId, userId, boardData) => {
   session.startTransaction();
 
   try {
-    const [workspace, user] = await Promise.all([
+    const [workspace, Rser] = await Promise.all([
       Workspace.findById(workspaceId, "_id boards"),
       User.findOne({ id: userId }, "_id"),
     ]);

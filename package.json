@@ -19,6 +19,7 @@
     "enum": "^3.0.4",
     "express": "^4.21.0",
     "helmet": "^7.1.0",
+    "html-to-text": "^9.0.5",
     "http-status": "^1.7.4",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",

@@ -11,6 +11,7 @@ const {
   createTask,
   updateTask,
   deleteTask,
+  updateTaskStatus,
 } = require("../controllers/task");
 
 router.get(
@@ -42,6 +43,13 @@ router.put(
   validate(validations.updateTaskValidation),
   authorize(permissions.CAN_UPDATE_TASK),
   updateTask
+);
+
+router.patch(
+  "/updateStatus/:taskId",
+  validate(validations.updateTaskStatusValidation),
+  authorize(),
+  updateTaskStatus
 );
 
 router.delete(

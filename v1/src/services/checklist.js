@@ -1,6 +1,6 @@
 const Checklist = require("../models/checklist");
 const Task = require("../models/task");
-const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
+const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const mongoose = require("mongoose");
 const ExceptionLogger = require("../scripts/logger/exception");
 const Logger = require("../scripts/logger/checklist");

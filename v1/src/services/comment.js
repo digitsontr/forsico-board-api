@@ -1,10 +1,11 @@
 const Comment = require("../models/comment");
 const Task = require("../models/task");
 const User = require("../models/user");
-const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
+const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const ExceptionLogger = require("../scripts/logger/exception");
 const Logger = require("../scripts/logger/comment");
-
+const task = require("../models/task");
+const { logAndPublishNotification } = require("../services/notification");
 
 const getCommentsForTask = async (taskId) => {
   try {
@@ -37,7 +38,10 @@ const getCommentById = async (commentId) => {
 
 const createComment = async (workspaceId, userId, taskId, commentData) => {
   try {
-    const user = await User.findOne({ id: userId }, "_id");
+    const user = await User.findOne(
+      { id: userId },
+      "_id firstName lastName profilePicture"
+    );
     const task = await Task.findById(taskId);
 
     if (!task) {
@@ -59,6 +63,16 @@ const createComment = async (workspaceId, userId, taskId, commentData) => {
       $push: { comments: savedComment._id },
     });
 
+    await logAndPublishNotification("Comment", "newComment", {
+      user,
+      comment: savedComment,
+      task,
+      taskId: task._id,
+      workspaceId,
+      boardId: task.boardId,
+      targetId: savedComment._id,
+    });
+
     return ApiResponse.success(savedComment);
   } catch (e) {
     console.error("Error creating comment:", e);
@@ -68,11 +82,15 @@ const createComment = async (workspaceId, userId, taskId, commentData) => {
 
 const updateComment = async (commentId, userId, updateData) => {
   try {
-    const user = await User.findOne({ id: userId }, "_id");
+    const user = await User.findOne(
+      { id: userId },
+      "_id firstName lastName profilePicture"
+    );
     const comment = await Comment.findOne({
       _id: commentId,
       userId: user._id,
     });
+    const task = await Task.findById(updateData.taskId);
 
     if (!comment) {
       return ApiResponse.fail([
@@ -85,6 +103,17 @@ const updateComment = async (commentId, userId, updateData) => {
     comment.updatedAt = Date.now();
 
     const updatedComment = await comment.save();
+
+    await logAndPublishNotification("Comment", "updateComment", {
+      user,
+      comment: updatedComment,
+      task,
+      taskId: task._id,
+      workspaceId: task.workspaceId,
+      boardId: task.boardId,
+      targetId: updatedComment._id,
+    });
+
     return ApiResponse.success(updatedComment);
   } catch (e) {
     console.error("Error updating comment:", e);

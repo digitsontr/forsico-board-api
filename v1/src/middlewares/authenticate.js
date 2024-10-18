@@ -1,5 +1,5 @@
 const { UNAUTHORIZED, FORBIDDEN } = require("http-status");
-const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
+const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const { jwtDecode } = require("jwt-decode");
 const jwt = require("jsonwebtoken");
 

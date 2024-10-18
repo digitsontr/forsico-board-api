@@ -2,7 +2,10 @@ const httpStatus = require("http-status");
 const service = require("../services/task");
 
 const getTasksOfBoard = async (req, res) => {
-  const response = await service.getTasksOfBoard(req.params.boardId, req.workspaceId);
+  const response = await service.getTasksOfBoard(
+    req.params.boardId,
+    req.workspaceId
+  );
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -34,6 +37,15 @@ const getStatusById = async (req, res) => {
   res.status(httpStatus.BAD_REQUEST).send(response);
 };
 
+const updateTaskStatus = async (req, res) => {
+  const response = await service.updateTaskStatus(req.params.taskId, req.body.statusId, req.user.sub);
+
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
+  } else {
+    res.status(httpStatus.BAD_REQUEST).send(response);
+  }
+};
 
 const createTask = async (req, res) => {
   const response = await service.createTask(req.workspaceId, req.body);
@@ -47,7 +59,7 @@ const createTask = async (req, res) => {
 };
 
 const updateTask = async (req, res) => {
-  const response = await service.updateTask(req.params.taskId, req.body);
+  const response = await service.updateTask(req.params.taskId, req.body, req.user.sub);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -75,4 +87,5 @@ module.exports = {
   createTask,
   updateTask,
   deleteTask,
+  updateTaskStatus,
 };

@@ -14,7 +14,7 @@ const createTaskValidation = Joi.object({
 });
 
 const updateTaskValidation = Joi.object({
-  taskId: Joi.string().required().min(24).max(24), 
+  taskId: Joi.string().required().min(24).max(24),
   name: Joi.string().optional().min(3),
   description: Joi.string().optional(),
   assignee: Joi.string().optional().min(24).max(24),
@@ -23,9 +23,14 @@ const updateTaskValidation = Joi.object({
   statusId: Joi.string().optional().min(24).max(24),
 });
 
+const updateTaskStatusValidation = Joi.object({
+  taskId: Joi.string().required().min(24).max(24),
+  statusId: Joi.string().required().min(24).max(24),
+});
+
 const getTasksOfBoardValidation = Joi.object({
   boardId: Joi.string().required().min(24).max(24),
-})
+});
 
 const getTaskByIdValidation = Joi.object({
   taskId: Joi.string().required().min(24).max(24),
@@ -40,5 +45,6 @@ module.exports = {
   updateTaskValidation,
   getTaskByIdValidation,
   deleteTaskValidation,
-  getTasksOfBoardValidation
+  getTasksOfBoardValidation,
+  updateTaskStatusValidation
 };

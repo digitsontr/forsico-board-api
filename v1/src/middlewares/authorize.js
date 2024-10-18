@@ -1,6 +1,6 @@
 const userService = require("../services/user");
 const subscriptionService = require("../services/subscription");
-const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
+const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const { FORBIDDEN } = require("http-status");
 
 const authorize = (permisson) => async (req, res, next) => {

@@ -1,5 +1,5 @@
 const httpStatus = require("http-status");
-const { ApiResponse, ErrorDetail } = require('../models/apiresponse');
+const { ApiResponse, ErrorDetail } = require('../models/apiResponse');
 
 const validate = (schema) => (req, res, next) => {
     const {

@@ -4,9 +4,14 @@ const List = require("../models/list");
 const Workspace = require("../models/workspace");
 const User = require("../models/user");
 const mongoose = require("mongoose");
-const { ApiResponse, ErrorDetail } = require("../models/apiresponse");
+const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const Logger = require("../scripts/logger/task");
 const ExceptionLogger = require("../scripts/logger/exception");
+const {
+  logAndPublishNotification,
+  detectTaskChanges,
+} = require("../services/notification");
+const task = require("../models/task");
 
 const getTasksOfBoard = async (boardId, workspaceId) => {
   try {
@@ -44,6 +49,47 @@ const getTaskById = async (id) => {
   }
 };
 
+const updateTaskStatus = async (taskId, newStatusId, userId) => {
+  try {
+    const user = await User.findOne(
+      { id: userId },
+      "_id firstName lastName profilePicture"
+    );
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return ApiResponse.fail([new ErrorDetail("Task not found")]);
+    }
+
+    const status = await TaskStatus.findById(newStatusId);
+    if (!status) {
+      return ApiResponse.fail([new ErrorDetail("Status not found")]);
+    }
+
+    task.statusId = newStatusId;
+    await task.save();
+
+    const updatedTask = await Task.findById(taskId).populate(
+      "assignee",
+      "firstName lastName profilePicture"
+    );
+
+    await logAndPublishNotification("Task", "statusChange", {
+      user,
+      task,
+      workspaceId: task.workspaceId,
+      boardId: task.boardId,
+      taskId: task._id,
+      targetId: task._id,
+      newStatus: status.name,
+    });
+
+    return ApiResponse.success(updatedTask);
+  } catch (error) {
+    console.error("Failed to update task status:", error);
+    return ApiResponse.fail([new ErrorDetail("Failed to update task status")]);
+  }
+};
+
 const createTask = async (workspaceId, taskData) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -54,7 +100,10 @@ const createTask = async (workspaceId, taskData) => {
       throw new Error("Workspace not found");
     }
 
-    const user = await User.findOne({ id: taskData.ownerId }, "_id");
+    const user = await User.findOne(
+      { id: taskData.ownerId },
+      "_id firstName lastName profilePicture"
+    );
     const assignedUser = await User.findOne({ id: taskData.assignee }, "_id");
 
     const defaultStatus = await TaskStatus.findOne({
@@ -98,9 +147,18 @@ const createTask = async (workspaceId, taskData) => {
     }
 
     const savedTask = await taskModel.save({ session });
-    const populatedTask = await Task
-      .findById(savedTask._id)
-      .populate("assignee", "firstName lastName email profilePicture").session(session);
+    const populatedTask = await Task.findById(savedTask._id)
+      .populate("assignee", "firstName lastName email profilePicture")
+      .session(session);
+
+    await logAndPublishNotification("Task", "newTask", {
+      user,
+      task: savedTask,
+      workspaceId: workspaceId,
+      taskId: task._id,
+      boardId: taskData.boardId,
+      targetId: savedTask._id,
+    });
 
     await session.commitTransaction();
     session.endSession();
@@ -116,8 +174,17 @@ const createTask = async (workspaceId, taskData) => {
   }
 };
 
-const updateTask = async (id, updateData) => {
+const updateTask = async (id, updateData, userId) => {
   try {
+    const user = await User.findOne(
+      { id: userId },
+      "_id firstName lastName profilePicture"
+    );
+    const task = await Task.findById(id);
+    if (!task) {
+      return ApiResponse.fail([new ErrorDetail("Task not found")]);
+    }
+
     const updatedTask = await Task.findByIdAndUpdate(id, updateData, {
       new: true,
     });
@@ -126,6 +193,20 @@ const updateTask = async (id, updateData) => {
       return ApiResponse.fail([
         new ErrorDetail("Task not found or update failed"),
       ]);
+    }
+
+    const changes = detectTaskChanges(task, updateData);
+
+    if (changes.length > 0) {
+      await logAndPublishNotification("Task", "updateTask", {
+        user,
+        task: updatedTask,
+        changes,
+        taskId: task._id,
+        workspaceId: task.workspaceId,
+        boardId: task.boardId,
+        targetId: task._id,
+      });
     }
 
     if (updateData.listId) {
@@ -184,4 +265,5 @@ module.exports = {
   createTask,
   updateTask,
   deleteTask,
+  updateTaskStatus,
 };
