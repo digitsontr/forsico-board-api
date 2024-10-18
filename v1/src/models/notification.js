@@ -11,6 +11,8 @@ const NotificationSchema = new mongoose.Schema({
     ref: "Board",
     required: true,
   },
+  action: { type: String, required: true },
+  model: { type: String, required: true },
   message: { type: String, required: true },
   targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
   readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],

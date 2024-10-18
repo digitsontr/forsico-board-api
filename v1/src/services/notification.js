@@ -10,6 +10,8 @@ const logAndPublishNotification = async (model, action, data) => {
     const notification = new Notification({
       workspaceId: data.workspaceId,
       boardId: data.boardId,
+      model: model,
+      action: action,
       message,
       targetId: data.targetId,
       readBy: [],
