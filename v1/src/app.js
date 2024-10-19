@@ -2,6 +2,7 @@ const express = require("express");
 const helmet = require("helmet");
 const config = require("./config");
 const loaders = require("./loaders");
+var cors = require("cors");
 const authenticate = require("./middlewares/authenticate");
 const {
   WorkspaceRoutes,
@@ -19,9 +20,11 @@ loaders();
 
 const app = express();
 
+app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(helmet());
 app.use(authenticate);
+
 
 const PORT = process.env.PORT || 8080;
 

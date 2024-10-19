@@ -3,7 +3,6 @@ const User = require("../models/user");
 const axios = require("axios");
 const mongoose = require("mongoose");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
-const { getCache, setCache, delCache } = require("../scripts/helpers/cache");
 const ExceptionLogger = require("../scripts/logger/exception");
 const Logger = require("../scripts/logger/workspace");
 const boardService = require("./board");
@@ -19,18 +18,13 @@ const getAllWorkspaces = async () => {
 const getWorkspacesOfUserCacheKey = (userId) => `workspaces:user:${userId}`;
 
 const getWorkspacesOfUser = async (user) => {
-  const cacheKey = getWorkspacesOfUserCacheKey(user.sub);
-  const cachedWorkspaces = await getCache(cacheKey);
-
-  if (cachedWorkspaces) {
-    console.log(cachedWorkspaces);
-    Logger.info(`User got workspace from cache userid: ${user.sub}`);
-    return ApiResponse.success(cachedWorkspaces);
-  }
-
   try {
     const userEntity = await User.findOne({ id: user.sub });
-    console.log(userEntity._id);
+
+    if(userEntity === null){
+      return ApiResponse.fail([new ErrorDetail("There is no user!")]);
+    }
+
     const workspaces = await Workspace.find(
       {
         owner: userEntity._id,
@@ -44,8 +38,6 @@ const getWorkspacesOfUser = async (user) => {
         select: "id firstName lastName profilePicture",
       },
     });
-
-    await setCache(cacheKey, workspaces);
 
     return ApiResponse.success(workspaces);
   } catch (e) {
@@ -116,8 +108,6 @@ const createWorkspace = async (workspaceData, user, accessToken) => {
 
     await session.commitTransaction();
     session.endSession();
-
-    delCache(getWorkspacesOfUserCacheKey(user.sub));
   } catch (e) {
     await session.abortTransaction();
     console.error(e);
@@ -157,8 +147,6 @@ const deleteWorkspace = async (id, user) => {
         new ErrorDetail("Workspace not found or delete failed"),
       ]);
     }
-
-    delCache(getWorkspacesOfUserCacheKey(user.sub));
 
     return ApiResponse.success(deletedWorkspace);
   } catch (e) {

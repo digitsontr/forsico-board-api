@@ -71,7 +71,7 @@ const createBoard = async (workspaceId, userId, boardData) => {
   session.startTransaction();
 
   try {
-    const [workspace, Rser] = await Promise.all([
+    const [workspace, user] = await Promise.all([
       Workspace.findById(workspaceId, "_id boards"),
       User.findOne({ id: userId }, "_id"),
     ]);
