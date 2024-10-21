@@ -8,6 +8,7 @@ const logAndPublishNotificationValidation = Joi.object({
 });
 
 const getNotificationsValidation = Joi.object({
+  workspaceIds: Joi.array().items(Joi.string().min(24).max(24)).required(),
   boardIds: Joi.array().items(Joi.string().min(24).max(24)).required(),
 });
 

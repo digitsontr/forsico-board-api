@@ -47,6 +47,15 @@ const updateTaskStatus = async (req, res) => {
   }
 };
 
+const search = async (req, res) => {
+  const response = await service.searchTasks(req.body, req.user.sub);
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
+  } else {
+    res.status(httpStatus.BAD_REQUEST).send(response);
+  }
+};
+
 const createTask = async (req, res) => {
   const response = await service.createTask(req.workspaceId, req.body);
 
@@ -88,4 +97,5 @@ module.exports = {
   updateTask,
   deleteTask,
   updateTaskStatus,
+  search
 };

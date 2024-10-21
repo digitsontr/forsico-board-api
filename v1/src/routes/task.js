@@ -12,6 +12,7 @@ const {
   updateTask,
   deleteTask,
   updateTaskStatus,
+  search
 } = require("../controllers/task");
 
 router.get(
@@ -23,7 +24,15 @@ router.get(
 );
 
 router.get(
+  "/search",
+  validate(validations.searchTaskValidation),
+  authorize(),
+  search
+);
+
+router.get(
   "/:taskId",
+  verifyWorkspace(),
   validate(validations.getTaskByIdValidation),
   authorize(),
   getTaskById
@@ -47,6 +56,7 @@ router.put(
 
 router.patch(
   "/updateStatus/:taskId",
+  verifyWorkspace(),
   validate(validations.updateTaskStatusValidation),
   authorize(),
   updateTaskStatus

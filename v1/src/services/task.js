@@ -155,8 +155,8 @@ const createTask = async (workspaceId, taskData) => {
       user,
       task: savedTask,
       workspaceId: workspaceId,
-      taskId: task._id,
-      boardId: taskData.boardId,
+      taskId: savedTask._id,
+      boardId: savedTask.boardId,
       targetId: savedTask._id,
     });
 
@@ -232,6 +232,29 @@ const updateTask = async (id, updateData, userId) => {
   }
 };
 
+const searchTasks = async (searchData, userId) => {
+  const { query, page = 1, limit = 10, workspaceIds } = searchData;
+  const user = await User.findOne({ id: userId }, "_id");
+  const workspaces = (await Workspace.find({ members: user._id }, "_id")).map(
+    (ws) => ws._id.toString()
+  );
+
+  try {
+    const tasks = await Task.find({
+      workspaceId: {
+        $in: workspaceIds.filter((id) => workspaces.includes(id)),
+      },
+      $text: { $search: query },
+    })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    return ApiResponse.success(tasks);
+  } catch (error) {
+    return ApiResponse.fail([new ErrorDetail(error, false)]);
+  }
+};
+
 const deleteTask = async (id) => {
   try {
     const deletedTask = await Task.findByIdAndDelete(id);
@@ -266,4 +289,5 @@ module.exports = {
   updateTask,
   deleteTask,
   updateTaskStatus,
+  searchTasks,
 };

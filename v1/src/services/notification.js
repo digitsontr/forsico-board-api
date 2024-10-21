@@ -3,6 +3,7 @@ const redis = require("../config/redisClient");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const { htmlToText } = require("html-to-text");
 const User = require("../models/user");
+const Workspace = require("../models/workspace");
 
 const logAndPublishNotification = async (model, action, data) => {
   try {
@@ -15,6 +16,8 @@ const logAndPublishNotification = async (model, action, data) => {
       action: action,
       message,
       targetId: data.targetId,
+      user: data.user._id,
+      taskId: data.taskId || null,
       readBy: [],
     });
 
@@ -42,12 +45,21 @@ const logAndPublishNotification = async (model, action, data) => {
   }
 };
 
-const getNotifications = async (workspaceId, boardIds) => {
+const getNotifications = async (workspaceIds, boardIds, userId) => {
   try {
+    const user = await User.findOne({ id: userId }, "_id");
+    const workspaces = (await Workspace.find({ members: user._id }, "_id")).map(
+      (ws) => ws._id.toString()
+    );
     const notifications = await Notification.find({
-      workspaceId,
+      workspaceId: {
+        $in: workspaceIds.filter((id) => workspaces.includes(id)),
+      },
       boardId: { $in: boardIds },
-    }).sort({ createdAt: -1 }).populate("readBy", "_id id");
+    })
+      .sort({ createdAt: -1 })
+      .populate("readBy", "_id id")
+      .populate("user", "_id id firstName lastName profilePicture");
 
     return ApiResponse.success(notifications);
   } catch (error) {
@@ -121,7 +133,7 @@ const handleTaskNotifications = (
     case "updateTask":
       return generateTaskChangeMessage(user, task.name, changes);
     case "newTask":
-      return `${user.firstName} ${user.lastName} created a new task: ${task.name}.`;
+      return `${user.firstName} ${user.lastName} created a new task ${task.name}.`;
     default:
       return "An unknown task action occurred.";
   }

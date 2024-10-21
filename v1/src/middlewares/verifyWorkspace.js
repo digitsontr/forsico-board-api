@@ -5,7 +5,6 @@ const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 
 const verifyWorkspace = () => async (req, res, next) => {
   const workspaceId = req.headers["x-workspace-id"];
-
   req.workspaceId = workspaceId;
 
   if (!workspaceId) {

@@ -3,8 +3,9 @@ const service = require("../services/notification");
 
 const getNotifications = async (req, res) => {
   const response = await service.getNotifications(
-    req.workspaceId,
-    req.body.boardIds
+    req.body.workspaceIds,
+    req.body.boardIds,
+    req.user.sub
   );
 
   if (response.status) {
@@ -42,7 +43,6 @@ const updateNotificationStatus = async (req, res) => {
 
   res.status(httpStatus.BAD_REQUEST).send(response);
 };
-
 
 module.exports = {
   bulkUpdateNotificationStatus,

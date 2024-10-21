@@ -15,6 +15,8 @@ const NotificationSchema = new mongoose.Schema({
   model: { type: String, required: true },
   message: { type: String, required: true },
   targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  taskId: { type: mongoose.Schema.Types.ObjectId, ref: "Task" },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   createdAt: { type: Date, default: Date.now },
 });

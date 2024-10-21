@@ -11,10 +11,9 @@ const {
   bulkUpdateNotificationStatus,
 } = require("../controllers/notification");
 
-router.get(
+router.post(
   "/",
   validate(validations.getNotificationsValidation),
-  verifyWorkspace(),
   authorize(),
   getNotifications
 );
