@@ -36,7 +36,7 @@ router.put(
   "/:listid",
   validate(validations.updateValidation),
   verifyWorkspace(),
-  authorize(permissons.CAN_UPDATE_LIST),
+  authorize(),
   updateList
 );
 
@@ -44,7 +44,7 @@ router.delete(
   "/:listid",
   validate(validations.deleteValidation),
   verifyWorkspace(),
-  authorize(permissons.CAN_DELETE_LIST),
+  authorize(),
   deleteList
 );
 

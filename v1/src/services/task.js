@@ -7,11 +7,13 @@ const mongoose = require("mongoose");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const Logger = require("../scripts/logger/task");
 const ExceptionLogger = require("../scripts/logger/exception");
+const { v4: uuidv4 } = require("uuid");
 const {
   logAndPublishNotification,
   detectTaskChanges,
 } = require("../services/notification");
-const task = require("../models/task");
+const commentService = require("./comment");
+const checklistService = require("./checklist");
 
 const getTasksOfBoard = async (boardId, workspaceId) => {
   try {
@@ -235,15 +237,16 @@ const updateTask = async (id, updateData, userId) => {
 const searchTasks = async (searchData, userId) => {
   const { query, page = 1, limit = 10, workspaceIds } = searchData;
   const user = await User.findOne({ id: userId }, "_id");
-  const workspaces = (await Workspace.find({ members: user._id }, "_id")).map(
-    (ws) => ws._id.toString()
-  );
+  const workspaces = (
+    await Workspace.find({ members: user._id, isDeleted: false }, "_id")
+  ).map((ws) => ws._id.toString());
 
   try {
     const tasks = await Task.find({
       workspaceId: {
         $in: workspaceIds.filter((id) => workspaces.includes(id)),
       },
+      isDeleted: false,
       $text: { $search: query },
     })
       .skip((page - 1) * limit)
@@ -255,31 +258,79 @@ const searchTasks = async (searchData, userId) => {
   }
 };
 
-const deleteTask = async (id) => {
+const deleteTask = async (taskId, deletionId) => {
   try {
-    const deletedTask = await Task.findByIdAndDelete(id);
-    if (!deletedTask) {
-      return ApiResponse.fail([
-        new ErrorDetail("Task not found or delete failed"),
-      ]);
-    }
+    deletionId = deletionId || uuidv4();
 
-    if (deletedTask.parentTask) {
-      await Task.findByIdAndUpdate(deletedTask.parentTask, {
-        $pull: { subtasks: deletedTask._id },
-      });
-    }
+    const updatedTask = await Task.findByIdAndUpdate(taskId, {
+      isDeleted: true,
+      deletedAt: new Date(),
+      deletionId: deletionId,
+    });
 
-    if (deletedTask.listId) {
-      await List.findByIdAndUpdate(deletedTask.listId, {
-        $pull: { tasks: deletedTask._id },
-      });
-    }
+    Logger.log("info", `TASK ${taskId} REMOVED DELETION ID: ${deletionId}`);
 
-    return ApiResponse.success(deletedTask);
+    await commentService.deleteCommentsByTask(taskId, deletionId);
+    await checklistService.deleteChecklistByTask(taskId, deletionId);
+
+    return ApiResponse.success(updatedTask);
   } catch (e) {
     return ApiResponse.fail([new ErrorDetail("Failed to delete task")]);
   }
+};
+
+const moveTasksToFirstList = async (listId) => {
+  const tasks = await Task.find({ listId, isDeleted: false });
+  const firstList = await List.findOne({ boardId: tasks[0]?.boardId }).sort({
+    createdAt: 1,
+  });
+
+  const results = await Promise.allSettled(
+    tasks.map(async (task) => {
+      await Task.findByIdAndUpdate(task._id, { listId: firstList._id });
+    })
+  );
+
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      Logger.log(
+        "error",
+        `List ${lists[index]._id} can't be removed:`,
+        result.reason
+      );
+    }
+  });
+
+  return true;
+};
+
+const deleteTaskByBoard = async (boardId, deletionId) => {
+  Logger.log(
+    "info",
+    "TASK REMOVE OPERATION STARTED DELETION ID: " + deletionId
+  );
+
+  const tasks = await Task.find({ boardId });
+
+  const results = await Promise.allSettled(
+    tasks.map(async (list) => {
+      await deleteTask(list._id, deletionId);
+    })
+  );
+
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      Logger.log(
+        "error",
+        `Task ${tasks[index]._id} can't be removed:`,
+        result.reason
+      );
+    }
+  });
+
+  Logger.log("info", "TASK REMOVE OPERATION ENDED DELETION ID: " + deletionId);
+
+  return true;
 };
 
 module.exports = {
@@ -290,4 +341,6 @@ module.exports = {
   deleteTask,
   updateTaskStatus,
   searchTasks,
+  moveTasksToFirstList,
+  deleteTaskByBoard,
 };

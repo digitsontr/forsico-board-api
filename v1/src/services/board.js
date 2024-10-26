@@ -8,7 +8,9 @@ const userService = require("../services/user");
 const taskStatusService = require("../services/taskStatus");
 const ExceptionLogger = require("../scripts/logger/exception");
 const Logger = require("../scripts/logger/board");
-
+const listService = require("./list");
+const taskService = require("./task");
+const { v4: uuidv4 } = require("uuid");
 
 const getBoardMembers = async (boardId) => {
   try {
@@ -24,16 +26,18 @@ const getBoardMembers = async (boardId) => {
     return ApiResponse.success(board.members);
   } catch (e) {
     Logger.error(e);
-    return ApiResponse.fail([new ErrorDetail("Failed to retrieve board members")]);
+    return ApiResponse.fail([
+      new ErrorDetail("Failed to retrieve board members"),
+    ]);
   }
 };
 
 const getBoardsOfWorkspace = async (workspaceId) => {
   try {
-    const boards = await Board.find({ workspaceId: workspaceId }).populate(
-      "members",
-      "firstName lastname id profilePicture"
-    );
+    const boards = await Board.find(
+      { workspaceId: workspaceId, isDeleted: false },
+      "-isDeleted -deletionId -deletedAt"
+    ).populate("members", "firstName lastname id profilePicture");
     return ApiResponse.success(boards);
   } catch (e) {
     Logger.error(e);
@@ -89,7 +93,7 @@ const createBoard = async (workspaceId, userId, boardData) => {
 
     const savedBoardPromise = boardModel.save({ session });
 
-    const taskStatusPromise = taskStatusService.createDefaultTaskStatus(
+    const taskStatusPromise = taskStatusService.createDefaultTaskStatuses(
       boardModel._id,
       workspaceId,
       user._id
@@ -105,9 +109,19 @@ const createBoard = async (workspaceId, userId, boardData) => {
     }
 
     const defaultLists = [
-      { name: "Backlog", boardId: savedBoard._id, workspaceId },
-      { name: "In Progress", boardId: savedBoard._id, workspaceId },
-      { name: "Done", boardId: savedBoard._id, workspaceId },
+      {
+        name: "Backlog",
+        boardId: savedBoard._id,
+        workspaceId,
+        color: "#ED1E5A",
+      },
+      {
+        name: "In Progress",
+        boardId: savedBoard._id,
+        workspaceId,
+        color: "#36C5F0",
+      },
+      { name: "Done", boardId: savedBoard._id, workspaceId, color: "#A1F679" },
     ];
 
     const createdLists = await List.insertMany(defaultLists, { session });
@@ -148,18 +162,21 @@ const updateBoard = async (id, updateData) => {
   }
 };
 
-const deleteBoard = async (id) => {
+const deleteBoard = async (boardId, deletionId) => {
   try {
-    const deletedBoard = await Board.findByIdAndDelete(id);
-    if (!deletedBoard) {
-      return ApiResponse.fail([
-        new ErrorDetail("Board not found or delete failed"),
-      ]);
-    }
+    deletionId = deletionId || uuidv4();
 
-    await Workspace.findByIdAndUpdate(deletedBoard.workspace, {
-      $pull: { boards: deletedBoard._id },
+    const deletedBoard = await Board.findByIdAndUpdate(boardId, {
+      isDeleted: true,
+      deletedAt: new Date(),
+      deletionId: deletionId,
     });
+
+    Logger.log("info", `BOARD ${boardId} REMOVED DELETION ID: ${deletionId}`);
+
+    await listService.deleteListsByBoard(boardId, deletionId);
+    await taskService.deleteTaskByBoard(boardId, deletionId);
+    await taskStatusService.deleteTaskStatusesByBoard(boardId, deletionId);
 
     return ApiResponse.success(deletedBoard);
   } catch (e) {
@@ -197,6 +214,32 @@ const addMemberToBoard = async (boardId, userData) => {
   }
 };
 
+const deleteBoardsByWorkspaceId = async (workspaceId, deletionId) => {
+  Logger.log(
+    "info",
+    "BOARD REMOVE OPERATION STARTED DELETION ID: " + deletionId
+  );
+
+  const boards = await Board.find({ workspaceId });
+  const results = await Promise.allSettled(
+    boards.map((board) => deleteBoard(board._id, deletionId))
+  );
+
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      Logger.log(
+        "error",
+        `Board ${boards[index]._id} can't be removed:`,
+        result.reason
+      );
+    }
+  });
+
+  Logger.log("info", "BOARD REMOVE OPERATION ENDED DELETION ID: " + deletionId);
+
+  return true;
+};
+
 module.exports = {
   getBoardsOfWorkspace,
   getBoardById,
@@ -205,4 +248,5 @@ module.exports = {
   updateBoard,
   deleteBoard,
   addMemberToBoard,
+  deleteBoardsByWorkspaceId,
 };

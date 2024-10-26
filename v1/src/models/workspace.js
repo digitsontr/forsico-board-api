@@ -9,6 +9,9 @@ const WorkspaceSchema = new Schema(
     boards: [{ type: Schema.Types.ObjectId, ref: "Board" }],
     members: [{ type: Schema.Types.ObjectId, ref: "User" }],
     owner: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
+    deletionId: { type: String, default: null },
   },
   { versionKey: false, timestamps: true }
 );

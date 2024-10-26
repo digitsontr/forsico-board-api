@@ -21,7 +21,7 @@ const logAndPublishNotification = async (model, action, data) => {
       readBy: [],
     });
 
-    await notification.save();
+    const savedNotification = await notification.save();
 
     redis.publish(
       `workspace:${data.workspaceId}:board:${data.boardId}`,
@@ -35,6 +35,7 @@ const logAndPublishNotification = async (model, action, data) => {
         user: data.user,
         targetId: data.targetId,
         createdAt: notification.createdAt,
+        _id: savedNotification._id,
       })
     );
 
@@ -45,12 +46,21 @@ const logAndPublishNotification = async (model, action, data) => {
   }
 };
 
-const getNotifications = async (workspaceIds, boardIds, userId) => {
+const getNotifications = async (
+  workspaceIds,
+  boardIds,
+  userId,
+  page = 1,
+  limit = 10
+) => {
   try {
     const user = await User.findOne({ id: userId }, "_id");
     const workspaces = (await Workspace.find({ members: user._id }, "_id")).map(
       (ws) => ws._id.toString()
     );
+    
+    const skip = (page - 1) * limit;
+
     const notifications = await Notification.find({
       workspaceId: {
         $in: workspaceIds.filter((id) => workspaces.includes(id)),
@@ -58,10 +68,15 @@ const getNotifications = async (workspaceIds, boardIds, userId) => {
       boardId: { $in: boardIds },
     })
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .populate("readBy", "_id id")
       .populate("user", "_id id firstName lastName profilePicture");
 
-    return ApiResponse.success(notifications);
+    return ApiResponse.success({
+      notifications,
+      page,
+    });
   } catch (error) {
     console.error("Failed to fetch notifications:", error);
     return ApiResponse.fail([new ErrorDetail(error.message)]);
@@ -70,7 +85,9 @@ const getNotifications = async (workspaceIds, boardIds, userId) => {
 
 const updateNotificationStatus = async (notificationId, userId) => {
   try {
-    const notification = await Notification.findById(notificationId);
+    const notification = await Notification.findById(notificationId)
+      .populate("readBy", "_id id")
+      .populate("user", "_id id firstName lastName profilePicture");
     const user = await User.findOne({ id: userId }, "_id");
 
     if (!notification) {
@@ -92,18 +109,20 @@ const updateNotificationStatus = async (notificationId, userId) => {
 const bulkUpdateNotificationStatus = async (notificationIds, userId) => {
   try {
     const user = await User.findOne({ id: userId }, "_id");
-    const result = await Notification.updateMany(
+
+    const updateResult = await Notification.updateMany(
       { _id: { $in: notificationIds } },
-      { $addToSet: { readBy: user._id } }
+      { $addToSet: { readBy: user._id } },
+      { writeConcern: { w: "majority" } }
     );
 
-    if (result.modifiedCount === 0) {
-      return ApiResponse.fail([
-        new ErrorDetail("No notifications were updated"),
-      ]);
-    }
+    const updatedNotifications = await Notification.find({
+      _id: { $in: notificationIds },
+    })
+      .populate("readBy", "_id id")
+      .populate("user", "_id id firstName lastName profilePicture");
 
-    return ApiResponse.success(`${result.modifiedCount} notifications updated`);
+    return ApiResponse.success(updatedNotifications);
   } catch (error) {
     console.error("Failed to update notifications:", error);
     return ApiResponse.fail([new ErrorDetail(error.message)]);

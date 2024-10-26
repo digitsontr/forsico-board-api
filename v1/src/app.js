@@ -13,7 +13,9 @@ const {
   CommentRoutes,
   ChecklistRoutes,
   NotificationRoutes,
+  PutBackRoutes,
 } = require("./routes");
+const cronJob = require("./scripts/helpers/cronJob");
 
 config();
 loaders();
@@ -39,4 +41,5 @@ app.listen(PORT, () => {
   app.use("/comment", CommentRoutes);
   app.use("/checklist", ChecklistRoutes);
   app.use("/notification", NotificationRoutes);
+  app.use("/putback", PutBackRoutes)
 });

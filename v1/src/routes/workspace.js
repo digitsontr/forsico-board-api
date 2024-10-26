@@ -34,14 +34,14 @@ router.put(
   '/',
   verifyWorkspace(),
   validate(validations.updateValidation),
-  authorize(permissons.CAN_UPDATE_WORKSPACE),
+  authorize(),
   updateWorkspace
 );
 
 router.delete(
   '/',
   verifyWorkspace(),
-  authorize(permissons.CAN_DELETE_WORKSPACE),
+  authorize(),
   deleteWorkspace
 );
 

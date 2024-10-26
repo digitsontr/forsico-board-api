@@ -41,7 +41,7 @@ router.put(
   "/:statusId",
   verifyWorkspace(),
   validate(validations.updateTaskStatusValidation),
-  authorize(permissions.CAN_UPDATE_TASK_STATUS),
+  authorize(),
   updateTaskStatus
 );
 
@@ -49,7 +49,7 @@ router.delete(
   "/:statusId",
   verifyWorkspace(),
   validate(validations.getDeleteTaskStatusValidation),
-  authorize(permissions.CAN_DELETE_TASK_STATUS),
+  authorize(),
   deleteTaskStatus
 );
 

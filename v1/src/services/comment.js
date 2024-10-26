@@ -9,7 +9,7 @@ const { logAndPublishNotification } = require("../services/notification");
 
 const getCommentsForTask = async (taskId) => {
   try {
-    const comments = await Comment.find({ taskId: taskId }).populate(
+    const comments = await Comment.find({ taskId: taskId, isDeleted:false }).populate(
       "userId",
       "firstName lastName profilePicture"
     );
@@ -135,6 +135,8 @@ const deleteComment = async (commentId, userId) => {
       { session }
     );
 
+    Logger.log("info", `COMMENT ${commentId} REMOVED`);
+
     if (!deletedComment) {
       await session.abortTransaction();
       session.endSession();
@@ -169,10 +171,29 @@ const deleteComment = async (commentId, userId) => {
   }
 };
 
+const deleteCommentsByTask = async (taskId, deletionId) => {
+  try {
+    await Comment.updateMany(
+      { taskId },
+      { isDeleted: true, deletedAt: new Date(), deletionId: deletionId }
+    );
+
+    Logger.log("info", `COMMENTS OF TASK ${taskId} REMOVED DELETION ID: ${deletionId}`);
+
+    return true;
+  } catch (e) {
+    Logger.log(
+      "error",
+      `Comments can't be removed from task TASK ID:${taskId}`
+    );
+  }
+};
+
 module.exports = {
   getCommentsForTask,
   getCommentById,
   createComment,
   updateComment,
   deleteComment,
+  deleteCommentsByTask,
 };

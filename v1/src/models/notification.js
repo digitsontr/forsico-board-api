@@ -19,6 +19,9 @@ const NotificationSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   createdAt: { type: Date, default: Date.now },
+  isDeleted: { type: Boolean, default: false },
+  deletedAt: { type: Date },
+  deletionId: { type: String, default: null },
 });
 
 module.exports = mongoose.model("Notification", NotificationSchema);

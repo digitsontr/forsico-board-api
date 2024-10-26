@@ -50,7 +50,7 @@ router.put(
   "/:boardId",
   verifyWorkspace(),
   validate(validations.updateValidation),
-  authorize(permissons.CAN_UPDATE_BOARD),
+  authorize(),
   updateBoard
 );
 
@@ -58,7 +58,7 @@ router.delete(
   "/:boardId",
   verifyWorkspace(),
   validate(validations.deleteValidation),
-  authorize(permissons.CAN_DELETE_BOARD),
+  authorize(),
   deleteBoard
 );
 

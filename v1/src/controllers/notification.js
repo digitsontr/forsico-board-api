@@ -5,7 +5,8 @@ const getNotifications = async (req, res) => {
   const response = await service.getNotifications(
     req.body.workspaceIds,
     req.body.boardIds,
-    req.user.sub
+    req.user.sub,
+    Number(req.query.page) || 1
   );
 
   if (response.status) {

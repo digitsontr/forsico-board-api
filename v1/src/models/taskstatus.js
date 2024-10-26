@@ -10,6 +10,9 @@ const TaskStatusSchema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true }, 
     allowedTransitions: [{ type: Schema.Types.ObjectId, ref: "TaskStatus" }], 
     listId: { type: Schema.Types.ObjectId, ref: "List" },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
+    deletionId: { type: String, default: null },
   },
   { versionKey: false, timestamps: true }
 );

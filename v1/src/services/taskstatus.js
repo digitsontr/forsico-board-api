@@ -3,26 +3,39 @@ const User = require("../models/user");
 const ExceptionLogger = require("../scripts/logger/exception");
 const Logger = require("../scripts/logger/taskStatus");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
+const { v4: uuidv4 } = require("uuid");
 
+const createDefaultTaskStatuses = async (boardId, workspaceId, ownerId) => {
+  try {
+    const statuses = [
+      { name: "Backlog", color: "#f2f2f2" },
+      { name: "In Progress", color: "#ffcc00" },
+      { name: "Done", color: "#00cc66" },
+    ];
 
-const createDefaultTaskStatus = async (boardId, workspaceId, ownerId) => {
-    try {
-      const defaultStatus = new TaskStatus({
-        name: "Backlog",
-        color: "#f2f2f2",
+    const savedStatuses = [];
+
+    for (const status of statuses) {
+      const taskStatus = new TaskStatus({
+        ...status,
         boardId: boardId,
         workspaceId: workspaceId,
         createdBy: ownerId,
         allowedTransitions: [],
       });
-  
-      const savedStatus = await defaultStatus.save();
-      return ApiResponse.success(savedStatus);
-    } catch (error) {
-      console.error("Error creating default task status:", error);
-      return ApiResponse.fail([new ErrorDetail("Failed to create default task status")]);
+
+      const savedStatus = await taskStatus.save();
+      savedStatuses.push(savedStatus);
     }
-  };
+
+    return ApiResponse.success(savedStatuses);
+  } catch (error) {
+    console.error("Error creating default task statuses:", error);
+    return ApiResponse.fail([
+      new ErrorDetail("Failed to create default task statuses"),
+    ]);
+  }
+};
 
 const createTaskStatus = async (userId, workspaceId, statusData) => {
   try {
@@ -47,7 +60,10 @@ const createTaskStatus = async (userId, workspaceId, statusData) => {
 
 const getStatusesOfBoard = async (boardId) => {
   try {
-    const statuses = await TaskStatus.find({ boardId: boardId });
+    const statuses = await TaskStatus.find({
+      boardId: boardId,
+      isDeleted: false,
+    });
     return ApiResponse.success(statuses);
   } catch (e) {
     console.error("Error fetching statuses for board:", e);
@@ -97,20 +113,67 @@ const updateTaskStatus = async (statusId, statusData) => {
   }
 };
 
-const deleteTaskStatus = async (statusId) => {
+const deleteTaskStatus = async (statusId, deletionId, defaultStatusId) => {
   try {
-    const deletedStatus = await TaskStatus.findByIdAndDelete(statusId);
-    if (!deletedStatus) {
-      return ApiResponse.fail([
-        new ErrorDetail("Task status not found or delete failed"),
-      ]);
+    if (!deletionId) {
+      const status = await TaskStatus.findById(statusId);
+      if (!status) {
+        return ApiResponse.fail([new ErrorDetail("Task status not found")]);
+      }
+
+      const defaultStatus = await TaskStatus.findOne({ name: "Backlog" });
+      if (!defaultStatus) {
+        return ApiResponse.fail([new ErrorDetail("Default status not found")]);
+      }
+
+      await Task.updateMany(
+        { statusId: status._id },
+        { statusId: defaultStatusId || defaultStatus._id }
+      );
     }
 
-    return ApiResponse.success(deletedStatus);
+    deletionId = deletionId || uuidv4();
+
+    const updatedStatus = await TaskStatus.findByIdAndUpdate(statusId, {
+      isDeleted: true,
+      deletedAt: new Date(),
+      deletionId: deletionId,
+    });
+
+    return ApiResponse.success(updatedStatus);
   } catch (e) {
     console.error("Error deleting task status:", e);
     return ApiResponse.fail([new ErrorDetail("Failed to delete task status")]);
   }
+};
+
+const deleteTaskStatusesByBoard = async (boardId, deletionId) => {
+  Logger.log(
+    "info",
+    "TASKSTATUS REMOVE OPERATION STARTED DELETION ID: " + deletionId
+  );
+
+  const taskStatuses = await TaskStatus.find({ boardId });
+  const results = await Promise.allSettled(
+    taskStatuses.map((status) => deleteTaskStatus(status._id, deletionId))
+  );
+
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      Logger.log(
+        "error",
+        `TaskStatus ${taskStatuses[index]._id} can't be removed:`,
+        result.reason
+      );
+    }
+  });
+
+  Logger.log(
+    "info",
+    "TASKSTATUS REMOVE OPERATION ENDED DELETION ID: " + deletionId
+  );
+
+  return true;
 };
 
 module.exports = {
@@ -119,5 +182,6 @@ module.exports = {
   getStatusesOfBoard,
   updateTaskStatus,
   deleteTaskStatus,
-  createDefaultTaskStatus,
+  createDefaultTaskStatuses,
+  deleteTaskStatusesByBoard,
 };

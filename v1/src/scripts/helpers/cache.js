@@ -21,7 +21,6 @@ const setCache = async (key, value, ttl = 600) => {
 const delCache = async (key) => {
   try {
     await redis.del(key);
-    console.log("CACHE REMOVED KEY: " + key);
   } catch (err) {
     console.error("There is an issue on cache removing:", err);
   }

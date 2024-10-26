@@ -6,6 +6,7 @@ const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const ExceptionLogger = require("../scripts/logger/exception");
 const Logger = require("../scripts/logger/workspace");
 const boardService = require("./board");
+const { v4: uuidv4 } = require("uuid");
 
 const getAllWorkspaces = async () => {
   try {
@@ -21,13 +22,14 @@ const getWorkspacesOfUser = async (user) => {
   try {
     const userEntity = await User.findOne({ id: user.sub });
 
-    if(userEntity === null){
+    if (userEntity === null) {
       return ApiResponse.fail([new ErrorDetail("There is no user!")]);
     }
 
     const workspaces = await Workspace.find(
       {
         owner: userEntity._id,
+        isDeleted: false,
       },
       "name description owner"
     ).populate({
@@ -139,18 +141,26 @@ const updateWorkspace = async (id, updateData) => {
   }
 };
 
-const deleteWorkspace = async (id, user) => {
+const deleteWorkspace = async (id) => {
   try {
-    const deletedWorkspace = await Workspace.findByIdAndDelete(id);
-    if (!deletedWorkspace) {
-      return ApiResponse.fail([
-        new ErrorDetail("Workspace not found or delete failed"),
-      ]);
-    }
+    const deletionId = uuidv4();
+    Logger.log(
+      "info",
+      "WORKSPACE REMOVE OPERATION STARTED DELETION ID: " + deletionId
+    );
 
-    return ApiResponse.success(deletedWorkspace);
+    const workspace = await Workspace.findByIdAndUpdate(id, {
+      isDeleted: true,
+      deletedAt: new Date(),
+      deletionId: deletionId,
+    });
+
+    await boardService.deleteBoardsByWorkspaceId(id, deletionId);
+    return ApiResponse.success(workspace);
   } catch (e) {
-    return ApiResponse.fail([new ErrorDetail("Failed to delete workspace")]);
+    Logger.log("error", `Failed to remove workspace: ${e.message}`);
+
+    return ApiResponse.fail([new ErrorDetail("Failed to remove workspace")]);
   }
 };
 
@@ -175,11 +185,9 @@ const saveWorkspaceToAuthApi = async (id, name, accessToken) => {
   return axios
     .request(config)
     .then((res) => {
-      console.log(res.data);
       return res.data;
     })
     .catch((error, res) => {
-      console.log(error);
       return {
         status: false,
       };

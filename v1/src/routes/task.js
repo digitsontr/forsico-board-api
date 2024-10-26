@@ -50,7 +50,7 @@ router.put(
   "/:taskId",
   verifyWorkspace(),
   validate(validations.updateTaskValidation),
-  authorize(permissions.CAN_UPDATE_TASK),
+  authorize(),
   updateTask
 );
 
@@ -66,7 +66,7 @@ router.delete(
   "/:taskId",
   verifyWorkspace(),
   validate(validations.deleteTaskValidation),
-  authorize(permissions.CAN_DELETE_TASK),
+  authorize(),
   deleteTask
 );
 

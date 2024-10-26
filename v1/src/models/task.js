@@ -13,13 +13,16 @@ const TaskSchema = new Schema(
     ownerId: { type: String, ref: "User" },
     priority: Number,
     entranceDate: Date,
-    listId: { type: String, ref: "Board" },
+    listId: { type: String, ref: "List" },
     parentTask: { type: String, ref: "Task" },
     subtasks: [{ type: String, ref: "Task" }],
     workspaceId: { type: String, required: true },
     statusId: { type: Schema.Types.ObjectId, ref: "TaskStatus" },
     comments: [{ type: Schema.Types.ObjectId, ref: "Comment" }],
-    checklists: [{ type: Schema.Types.ObjectId, ref: "Checklist" }] 
+    checklists: [{ type: Schema.Types.ObjectId, ref: "Checklist" }],
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
+    deletionId: { type: String, default: null },
   },
   { versionKey: false, timestamps: true }
 );

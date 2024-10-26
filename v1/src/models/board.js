@@ -7,11 +7,14 @@ const BoardSchema = new Schema(
     name: String,
     description: String,
     creator: String,
-    workspaceId: { type: String, required: true }, 
+    workspaceId: { type: String, required: true },
     lists: [{ type: Schema.Types.ObjectId, ref: "List" }],
     members: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
+    deletionId: { type: String, default: null },
   },
   { versionKey: false, timestamps: true }
 );
 
-module.exports = mongoose.model("Board", BoardSchema)
+module.exports = mongoose.model("Board", BoardSchema);

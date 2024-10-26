@@ -16,6 +16,9 @@ const ChecklistSchema = new Schema(
     taskId: { type: Schema.Types.ObjectId, ref: "Task", required: true },
     workspaceId: { type: Schema.Types.ObjectId, ref: "Workspace", required: true },
     items: [ChecklistItemSchema],
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
+    deletionId: { type: String, default: null },
   },
   { versionKey: false, timestamps: true }
 );
