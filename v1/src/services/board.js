@@ -52,7 +52,7 @@ const getBoardById = async (id) => {
       "name description workspaceId"
     ).populate({
       path: "lists",
-      select: "name tasks",
+      select: "name tasks color",
       populate: {
         path: "tasks",
         select:
