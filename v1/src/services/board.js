@@ -52,9 +52,11 @@ const getBoardById = async (id) => {
       "name description workspaceId"
     ).populate({
       path: "lists",
+      match: {isDeleted : false},
       select: "name tasks color",
       populate: {
         path: "tasks",
+        match: {isDeleted : false},
         select:
           "name boardId assignee dueDate priority subtasks statusId parentTask",
       },

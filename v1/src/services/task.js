@@ -197,6 +197,10 @@ const updateTask = async (id, updateData, userId) => {
       ]);
     }
 
+    if (updateData.listId && task.listId.toString() !== updateData.listId) {
+      await moveTaskToNewList(task._id, task.listId, updateData.listId);
+    }
+
     const changes = detectTaskChanges(task, updateData);
 
     if (changes.length > 0) {
@@ -299,18 +303,25 @@ const deleteTask = async (taskId, deletionId) => {
 };
 
 const moveTasksToFirstList = async (listId) => {
+  console.log("LIST ID");
   const tasks = await Task.find({ listId, isDeleted: false });
   const firstList = await List.findOne({ boardId: tasks[0]?.boardId }).sort({
     createdAt: 1,
   });
 
+  console.log("first list", firstList);
   const results = await Promise.allSettled(
     tasks.map(async (task) => {
-      await Task.findByIdAndUpdate(task._id, { listId: firstList._id });
+      const updatedTask = await Task.findByIdAndUpdate(task._id, {
+        listId: firstList._id,
+      });
+      console.log("updated task", updatedTask);
+      await moveTaskToNewList(task._id, listId, firstList._id);
     })
   );
 
   results.forEach((result, index) => {
+    console.log("RESULTS", result);
     if (result.status === "rejected") {
       Logger.log(
         "error",
@@ -319,8 +330,6 @@ const moveTasksToFirstList = async (listId) => {
       );
     }
   });
-
-  return true;
 };
 
 const deleteTaskByBoard = async (boardId, deletionId) => {
@@ -350,6 +359,20 @@ const deleteTaskByBoard = async (boardId, deletionId) => {
   Logger.log("info", "TASK REMOVE OPERATION ENDED DELETION ID: " + deletionId);
 
   return true;
+};
+
+const moveTaskToNewList = async (taskId, oldListId, newListId) => {
+  const oldList = await List.findById(oldListId);
+  if (oldList) {
+    oldList.tasks.pull(taskId);
+    await oldList.save();
+  }
+
+  const newList = await List.findById(newListId);
+  if (newList) {
+    newList.tasks.push(taskId);
+    await newList.save();
+  }
 };
 
 module.exports = {

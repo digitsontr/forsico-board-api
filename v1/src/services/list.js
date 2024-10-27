@@ -96,6 +96,7 @@ const updateList = async (id, updateData) => {
 
 const deleteList = async (listId, deletionId) => {
   try {
+    console.log("DELETION ID", deletionId);
     if (!deletionId) {
       await taskService.moveTasksToFirstList(listId);
     }
@@ -104,11 +105,17 @@ const deleteList = async (listId, deletionId) => {
 
     Logger.log("info", `LIST ${listId} REMOVED DELETION ID: ${deletionId}`);
 
-    const updatedList = await List.findByIdAndUpdate(listId, {
-      isDeleted: true,
-      deletedAt: new Date(),
-      deletionId: deletionId,
-    });
+    const updatedList = await List.findByIdAndUpdate(
+      listId,
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletionId: deletionId,
+      },
+      {
+        new: true,
+      }
+    );
 
     return ApiResponse.success(updatedList);
   } catch (e) {
