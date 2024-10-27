@@ -249,12 +249,31 @@ const searchTasks = async (searchData, userId) => {
       isDeleted: false,
       $text: { $search: query },
     })
+      .populate("boardId", "_id name")
       .skip((page - 1) * limit)
       .limit(limit);
 
-    return ApiResponse.success(tasks);
+    console.log(tasks);
+
+    const queryWords = query.split(/\s+/);
+
+    const filteredResults = tasks.filter(
+      (task) =>
+        queryWords.every((word) =>
+          new RegExp(word, "i").test((task.name || "").replace(/\s+/g, ""))
+        ) ||
+        queryWords.every((word) =>
+          new RegExp(word, "i").test(
+            (task.description || "").replace(/\s+/g, "")
+          )
+        )
+    );
+
+    console.log(filteredResults);
+
+    return ApiResponse.success(filteredResults);
   } catch (error) {
-    return ApiResponse.fail([new ErrorDetail(error, false)]);
+    return ApiResponse.fail([new ErrorDetail(error.message, false)]);
   }
 };
 

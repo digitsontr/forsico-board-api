@@ -48,7 +48,7 @@ const updateTaskStatus = async (req, res) => {
 };
 
 const search = async (req, res) => {
-  const response = await service.searchTasks(req.body, req.user.sub);
+  const response = await service.searchTasks(req, req.user.sub);
   if (response.status) {
     res.status(httpStatus.OK).send(response);
   } else {
