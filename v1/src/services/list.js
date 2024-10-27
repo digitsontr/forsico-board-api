@@ -49,6 +49,7 @@ const createList = async (listData, workspaceId) => {
     const listModel = new List({
       name: listData.name,
       boardId: listData.boardId,
+      color: listData.color,
       workspaceId: workspaceId,
     });
 
