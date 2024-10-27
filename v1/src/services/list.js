@@ -96,7 +96,6 @@ const updateList = async (id, updateData) => {
 
 const deleteList = async (listId, deletionId) => {
   try {
-    console.log("DELETION ID", deletionId);
     if (!deletionId) {
       await taskService.moveTasksToFirstList(listId);
     }

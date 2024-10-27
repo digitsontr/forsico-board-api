@@ -23,11 +23,11 @@ const TaskSchema = new Schema(
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date },
     deletionId: { type: String, default: null },
+    members: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
   { versionKey: false, timestamps: true }
 );
 
 TaskSchema.index({ name: "text", description: "text" });
-
 
 module.exports = mongoose.model("Task", TaskSchema);

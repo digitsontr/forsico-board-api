@@ -89,6 +89,18 @@ const deleteTask = async (req, res) => {
   res.status(httpStatus.BAD_REQUEST).send(response);
 };
 
+const addMemberToTask = async (req, res) => {
+  const response = await service.addMemberToTask(req.params.taskId, req.body);
+
+  if (response.status) {
+    res.status(httpStatus.CREATED).send(response);
+    return;
+  }
+
+  res.status(httpStatus.BAD_REQUEST).send(response);
+};
+
+
 module.exports = {
   getTasksOfBoard,
   getTaskById,
@@ -97,5 +109,6 @@ module.exports = {
   updateTask,
   deleteTask,
   updateTaskStatus,
-  search
+  search,
+  addMemberToTask
 };

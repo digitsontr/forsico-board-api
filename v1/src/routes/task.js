@@ -12,7 +12,8 @@ const {
   updateTask,
   deleteTask,
   updateTaskStatus,
-  search
+  search,
+  addMemberToTask
 } = require("../controllers/task");
 
 router.get(
@@ -69,5 +70,16 @@ router.delete(
   authorize(),
   deleteTask
 );
+
+
+router
+  .route("/addMemberToTask/:taskId")
+  .post(
+    verifyWorkspace(),
+    validate(validations.addMemberToTaskValidation),
+    authorize(),
+    addMemberToTask
+  );
+
 
 module.exports = router;
