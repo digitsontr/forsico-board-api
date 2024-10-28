@@ -35,10 +35,18 @@ const getWorkspacesOfUser = async (user) => {
     ).populate({
       path: "boards",
       select: "id name members",
-      populate: {
-        path: "members",
-        select: "id firstName lastName profilePicture",
-      },
+      options: { sort: { createdAt: 1 } },
+      populate: [
+        {
+          path: "members",
+          select: "id firstName lastName profilePicture",
+        },
+        {
+          path: "lists",
+          select: "_id name",
+          options: { sort: { createdAt: 1 } },
+        },
+      ],
     });
 
     return ApiResponse.success(workspaces);

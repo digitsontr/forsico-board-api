@@ -20,13 +20,16 @@ const getTasksOfBoard = async (boardId, workspaceId) => {
   try {
     const tasks = await Task.find({ boardId: boardId, workspaceId })
       .populate("assignee", "firstName lastName profilePicture")
-      .populate({
-        path: "comments",
-        populate: {
-          path: "userId",
-          select: "firstName lastName profilePicture",
+      .populate([
+        {
+          path: "comments",
+          populate: {
+            path: "userId",
+            select: "firstName lastName profilePicture",
+          },
         },
-      });
+        { path: "members", select: "_id id firstName lastName profilePicture" },
+      ]);
     return ApiResponse.success(tasks);
   } catch (e) {
     console.error(e);
@@ -41,7 +44,8 @@ const getTaskById = async (id) => {
       "_id name description boardId assignee dueDate ownerId priority entranceDate listId statusId createdAt updatedAt"
     )
       .populate("assignee", "firstName lastName profilePicture")
-      .populate("ownerId", "firstName lastName profilePicture");
+      .populate("ownerId", "firstName lastName profilePicture")
+      .populate("members", "id _id firstName lastName profilePicture");
     if (!task) {
       return ApiResponse.fail([new ErrorDetail("Task not found")]);
     }
@@ -130,7 +134,7 @@ const createTask = async (workspaceId, taskData) => {
       workspaceId: workspaceId,
       listId: taskData.listId || null,
       statusId: defaultStatus._id,
-      members: [owner._id],
+      members: [user._id],
     });
 
     if (taskData.parentTask) {
@@ -206,7 +210,7 @@ const updateTask = async (id, updateData, userId) => {
           return subtask;
         }),
       ];
-      console.log("TASK IDS", taskIds)
+      console.log("TASK IDS", taskIds);
       await Promise.allSettled(
         taskIds.map(async (taskId) => {
           await moveTaskToNewList(taskId, task.listId, updateData.listId);
@@ -425,5 +429,5 @@ module.exports = {
   searchTasks,
   moveTasksToFirstList,
   deleteTaskByBoard,
-  addMemberToTask
+  addMemberToTask,
 };

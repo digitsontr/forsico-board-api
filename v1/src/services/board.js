@@ -50,17 +50,23 @@ const getBoardById = async (id) => {
     const board = await Board.findById(
       id,
       "name description workspaceId"
-    ).populate({
-      path: "lists",
-      match: {isDeleted : false},
-      select: "name tasks color",
-      populate: {
-        path: "tasks",
-        match: {isDeleted : false},
-        select:
-          "name boardId assignee dueDate priority subtasks statusId parentTask",
+    ).populate([
+      {
+        path: "lists",
+        match: { isDeleted: false },
+        select: "name tasks color",
+        populate: {
+          path: "tasks",
+          match: { isDeleted: false },
+          select:
+            "name boardId assignee dueDate priority subtasks statusId parentTask",
+        },
       },
-    });
+      {
+        path: "members",
+        select: "_id firstName lastName profilePicture id",
+      },
+    ]);
     if (!board) {
       Logger.error(`Board not found: boardId=${id}`);
       return ApiResponse.fail([new ErrorDetail("Board not found")]);
