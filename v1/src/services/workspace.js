@@ -28,10 +28,10 @@ const getWorkspacesOfUser = async (user) => {
 
     const workspaces = await Workspace.find(
       {
-        owner: userEntity._id,
+        members: userEntity._id,
         isDeleted: false,
       },
-      "name description owner"
+      "name description owner members"
     ).populate({
       path: "boards",
       select: "id name members",
@@ -48,6 +48,7 @@ const getWorkspacesOfUser = async (user) => {
         },
       ],
     });
+
 
     return ApiResponse.success(workspaces);
   } catch (e) {
@@ -202,6 +203,44 @@ const saveWorkspaceToAuthApi = async (id, name, accessToken) => {
     });
 };
 
+const addMemberToWorkspace = async (workspaceId, userData) => {
+  try {
+    const workspace = await Workspace.findById(workspaceId);
+
+    if (!workspace) {
+      return ApiResponse.fail([new ErrorDetail("Workspace not found")]);
+    }
+
+    let user = await User.findOne({ id: userData.id }, "_id");
+
+    if (!user) {
+      user = new User({
+        id: userData.userId,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        profilePicture: userData.profilePicture,
+        workspaces: [workspaceId],
+      });
+
+      await user.save();
+    }
+
+    if (!workspace.members.includes(user._id)) {
+      workspace.members.push(user._id);
+      await workspace.save();
+    } else {
+      return ApiResponse.fail([
+        new ErrorDetail("User is already a member of this board"),
+      ]);
+    }
+
+    return ApiResponse.success(workspace);
+  } catch (e) {
+    console.error(e);
+    return ApiResponse.fail([new ErrorDetail("Failed to add member to workspace")]);
+  }
+};
+
 module.exports = {
   getAllWorkspaces,
   getWorkspaceById,
@@ -209,4 +248,5 @@ module.exports = {
   createWorkspace,
   updateWorkspace,
   deleteWorkspace,
+  addMemberToWorkspace
 };

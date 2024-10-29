@@ -59,6 +59,17 @@ const updateWorkspace = async (req, res) => {
   res.status(httpStatus.BAD_REQUEST).send(response);
 };
 
+const addMemberToWorkspace = async (req, res) => {
+  const response = await service.addMemberToWorkspace(req.workspaceId, req.body);
+
+  if (response.status) {
+    res.status(httpStatus.CREATED).send(response);
+    return;
+  }
+
+  res.status(httpStatus.BAD_REQUEST).send(response);
+};
+
 const deleteWorkspace = async (req, res) => {
   const response = await service.deleteWorkspace(req.workspaceId, req.user);
 
@@ -77,4 +88,5 @@ module.exports = {
   createWorkspace,
   updateWorkspace,
   deleteWorkspace,
+  addMemberToWorkspace,
 };
