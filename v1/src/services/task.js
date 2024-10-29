@@ -441,7 +441,7 @@ const getUserTasks = async (userId) => {
           workspaceId: workspace._id,
           isDeleted: false,
           $or: [{ members: user._id }, { assignee: user._id }],
-        }).select("_id name description");
+        }).select("name boardId assignee dueDate priority subtasks statusId parentTask");
 
         return {
           id: workspace._id,
@@ -451,7 +451,7 @@ const getUserTasks = async (userId) => {
       })
     );
 
-    return ApiResponse.success({ workspaces: workspaceTasks });
+    return ApiResponse.success(workspaceTasks);
   } catch (e) {
     console.error("Error retrieving user tasks: ", e);
     return ApiResponse.fail([new ErrorDetail("Failed to retrieve user tasks")]);
