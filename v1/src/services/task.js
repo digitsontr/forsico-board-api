@@ -29,7 +29,8 @@ const getTasksOfBoard = async (boardId, workspaceId) => {
           },
         },
         { path: "members", select: "_id id firstName lastName profilePicture" },
-      ]);
+      ])
+      .populate("statusId", "_id name");
     return ApiResponse.success(tasks);
   } catch (e) {
     console.error(e);
@@ -45,7 +46,8 @@ const getTaskById = async (id) => {
     )
       .populate("assignee", "firstName lastName profilePicture")
       .populate("ownerId", "firstName lastName profilePicture")
-      .populate("members", "id _id firstName lastName profilePicture");
+      .populate("members", "id _id firstName lastName profilePicture")
+      .populate("statusId", "_id name");
     if (!task) {
       return ApiResponse.fail([new ErrorDetail("Task not found")]);
     }
@@ -75,10 +77,9 @@ const updateTaskStatus = async (taskId, newStatusId, userId) => {
     task.statusId = newStatusId;
     await task.save();
 
-    const updatedTask = await Task.findById(taskId).populate(
-      "assignee",
-      "firstName lastName profilePicture"
-    );
+    const updatedTask = await Task.findById(taskId)
+      .populate("assignee", "firstName lastName profilePicture")
+      .populate("statusId", "_id name");
 
     await logAndPublishNotification("Task", "statusChange", {
       user,
@@ -271,6 +272,7 @@ const searchTasks = async (searchData, userId) => {
       $text: { $search: query },
     })
       .populate("boardId", "_id name")
+      .populate("statusId", "_id name")
       .skip((page - 1) * limit)
       .limit(limit);
 
@@ -441,7 +443,11 @@ const getUserTasks = async (userId) => {
           workspaceId: workspace._id,
           isDeleted: false,
           $or: [{ members: user._id }, { assignee: user._id }],
-        }).select("name boardId assignee dueDate priority subtasks statusId parentTask");
+        })
+          .select(
+            "name boardId assignee dueDate priority subtasks statusId parentTask"
+          )
+          .populate("statusId", "_id name");
 
         return {
           id: workspace._id,
