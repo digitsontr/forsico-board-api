@@ -62,7 +62,7 @@ const updateTaskStatus = async (taskId, newStatusId, userId) => {
   try {
     const user = await User.findOne(
       { id: userId },
-      "_id firstName lastName profilePicture"
+      "_id id firstName lastName profilePicture"
     );
     const task = await Task.findById(taskId);
     if (!task) {
@@ -110,7 +110,7 @@ const createTask = async (workspaceId, taskData) => {
 
     const user = await User.findOne(
       { id: taskData.ownerId },
-      "_id firstName lastName profilePicture"
+      "_id id firstName lastName profilePicture"
     );
     const assignedUser = await User.findOne({ id: taskData.assignee }, "_id");
 
@@ -187,7 +187,7 @@ const updateTask = async (id, updateData, userId) => {
   try {
     const user = await User.findOne(
       { id: userId },
-      "_id firstName lastName profilePicture"
+      "_id id firstName lastName profilePicture"
     );
     const task = await Task.findById(id);
     if (!task) {

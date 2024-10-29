@@ -40,7 +40,7 @@ const createComment = async (workspaceId, userId, taskId, commentData) => {
   try {
     const user = await User.findOne(
       { id: userId },
-      "_id firstName lastName profilePicture"
+      "_id id firstName lastName profilePicture"
     );
     const task = await Task.findById(taskId);
 
@@ -84,7 +84,7 @@ const updateComment = async (commentId, userId, updateData) => {
   try {
     const user = await User.findOne(
       { id: userId },
-      "_id firstName lastName profilePicture"
+      "_id id firstName lastName profilePicture"
     );
     const comment = await Comment.findOne({
       _id: commentId,

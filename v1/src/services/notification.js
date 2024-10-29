@@ -58,7 +58,7 @@ const getNotifications = async (
     const workspaces = (await Workspace.find({ members: user._id }, "_id")).map(
       (ws) => ws._id.toString()
     );
-    
+
     const skip = (page - 1) * limit;
 
     const notifications = await Notification.find({
@@ -207,6 +207,11 @@ const detectTaskChanges = (oldTask, newData) => {
       oldTask.description !== newData.description
     )
       changes.push("description");
+    if (
+      typeof newData.listId !== "undefined" &&
+      oldTask.listId !== newData.listId
+    )
+      changes.push("list");
   } catch (e) {
     console.error(e);
   }
@@ -218,9 +223,8 @@ const generateTaskChangeMessage = (user, taskName, changes) => {
   if (changes.length === 1) {
     return `${user.firstName} ${user.lastName} updated ${changes[0]} for task ${taskName}.`;
   }
-  return `${user.firstName} ${user.lastName} updated ${changes.join(
-    ", "
-  )} for task ${taskName}.`;
+  return `${user.firstName} ${user.lastName} updated ${changes
+    .join(", ")} for task ${taskName}.`;
 };
 
 const formatComment = (comment) => {
