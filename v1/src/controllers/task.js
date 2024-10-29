@@ -101,6 +101,19 @@ const addMemberToTask = async (req, res) => {
 };
 
 
+
+const getUserTasks = async (req, res) => {
+  const response = await service.getUserTasks(req.params.userId);
+
+  if (response.status) {
+    res.status(httpStatus.CREATED).send(response);
+    return;
+  }
+
+  res.status(httpStatus.BAD_REQUEST).send(response);
+};
+
+
 module.exports = {
   getTasksOfBoard,
   getTaskById,
@@ -110,5 +123,6 @@ module.exports = {
   deleteTask,
   updateTaskStatus,
   search,
-  addMemberToTask
+  addMemberToTask,
+  getUserTasks
 };

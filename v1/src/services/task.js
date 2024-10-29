@@ -419,6 +419,45 @@ const addMemberToTask = async (taskId, userData) => {
   }
 };
 
+const getUserTasks = async (userId) => {
+  try {
+    const user = await User.findOne({ id: userId }, "_id");
+    if (!user) {
+      return ApiResponse.fail([new ErrorDetail("User not found")]);
+    }
+
+    const workspaces = await Workspace.find({
+      members: user._id,
+      isDeleted: false,
+    }).select("_id name");
+
+    if (workspaces.length === 0) {
+      return ApiResponse.success([]);
+    }
+
+    const workspaceTasks = await Promise.all(
+      workspaces.map(async (workspace) => {
+        const tasks = await Task.find({
+          workspaceId: workspace._id,
+          isDeleted: false,
+          $or: [{ members: user._id }, { assignee: user._id }],
+        }).select("_id name description");
+
+        return {
+          id: workspace._id,
+          name: workspace.name,
+          tasks,
+        };
+      })
+    );
+
+    return ApiResponse.success({ workspaces: workspaceTasks });
+  } catch (e) {
+    console.error("Error retrieving user tasks: ", e);
+    return ApiResponse.fail([new ErrorDetail("Failed to retrieve user tasks")]);
+  }
+};
+
 module.exports = {
   getTasksOfBoard,
   getTaskById,
@@ -430,4 +469,5 @@ module.exports = {
   moveTasksToFirstList,
   deleteTaskByBoard,
   addMemberToTask,
+  getUserTasks,
 };

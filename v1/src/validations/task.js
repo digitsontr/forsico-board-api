@@ -55,6 +55,10 @@ const addMemberToTaskValidation = Joi.object({
   taskId: Joi.string().required().min(24).max(24)
 });
 
+const getUserTasksValidation = Joi.object({
+  userId: Joi.string().required().min(36).max(36),
+});
+
 module.exports = {
   createTaskValidation,
   updateTaskValidation,
@@ -63,5 +67,6 @@ module.exports = {
   getTasksOfBoardValidation,
   updateTaskStatusValidation,
   searchTaskValidation,
-  addMemberToTaskValidation
+  addMemberToTaskValidation,
+  getUserTasksValidation
 };

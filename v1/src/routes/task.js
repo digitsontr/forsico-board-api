@@ -13,8 +13,10 @@ const {
   deleteTask,
   updateTaskStatus,
   search,
-  addMemberToTask
+  addMemberToTask,
+  getUserTasks
 } = require("../controllers/task");
+
 
 router.get(
   "/getTasksOfBoard/:boardId",
@@ -22,6 +24,14 @@ router.get(
   authorize(),
   validate(validations.getTasksOfBoardValidation),
   getTasksOfBoard
+);
+
+router.get(
+  "/getUserTasks/:userId",
+  verifyWorkspace(),
+  authorize(),
+  validate(validations.getUserTasksValidation),
+  getUserTasks
 );
 
 router.get(
