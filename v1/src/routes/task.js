@@ -27,10 +27,9 @@ router.get(
 );
 
 router.get(
-  "/getUserTasks/:userId",
+  "/getUserTasks",
   verifyWorkspace(),
   authorize(),
-  validate(validations.getUserTasksValidation),
   getUserTasks
 );
 

@@ -103,7 +103,7 @@ const addMemberToTask = async (req, res) => {
 
 
 const getUserTasks = async (req, res) => {
-  const response = await service.getUserTasks(req.params.userId);
+  const response = await service.getUserTasks(req.user.sub);
 
   if (response.status) {
     res.status(httpStatus.CREATED).send(response);
