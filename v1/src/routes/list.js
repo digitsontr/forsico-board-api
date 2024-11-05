@@ -11,6 +11,7 @@ const {
   createList,
   updateList,
   deleteList,
+  updateMultipleListOrders
 } = require("../controllers/list");
 
 router.get("/getlistsofboard/:boardId", authorize(), getListsOfBoard);
@@ -46,6 +47,14 @@ router.delete(
   verifyWorkspace(),
   authorize(),
   deleteList
+);
+
+router.patch(
+  "/updateListOrders/:boardId",
+  validate(validations.updateOrderValidation),
+  verifyWorkspace(),
+  authorize(),
+  updateMultipleListOrders
 );
 
 module.exports = router;

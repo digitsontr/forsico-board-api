@@ -37,8 +37,24 @@ const getStatusById = async (req, res) => {
   res.status(httpStatus.BAD_REQUEST).send(response);
 };
 
+const changeAssignee = async (req, res) => {
+  const { taskId } = req.params;
+  const { newAssigneeId } = req.body;
+  const response = await service.changeTaskAssignee(taskId, newAssigneeId, req.user.sub);
+
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
+  } else {
+    res.status(httpStatus.BAD_REQUEST).send(response);
+  }
+};
+
 const updateTaskStatus = async (req, res) => {
-  const response = await service.updateTaskStatus(req.params.taskId, req.body.statusId, req.user.sub);
+  const response = await service.updateTaskStatus(
+    req.params.taskId,
+    req.body.statusId,
+    req.user.sub
+  );
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -68,7 +84,11 @@ const createTask = async (req, res) => {
 };
 
 const updateTask = async (req, res) => {
-  const response = await service.updateTask(req.params.taskId, req.body, req.user.sub);
+  const response = await service.updateTask(
+    req.params.taskId,
+    req.body,
+    req.user.sub
+  );
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -93,14 +113,26 @@ const addMemberToTask = async (req, res) => {
   const response = await service.addMemberToTask(req.params.taskId, req.body);
 
   if (response.status) {
-    res.status(httpStatus.CREATED).send(response);
+    res.status(httpStatus.OK).send(response);
     return;
   }
 
   res.status(httpStatus.BAD_REQUEST).send(response);
 };
 
+const removeMemberFromTask = async (req, res) => {
+  const response = await service.removeMemberFromTask(
+    req.params.taskId,
+    req.body.userId
+  );
 
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
+    return;
+  }
+
+  res.status(httpStatus.BAD_REQUEST).send(response);
+};
 
 const getUserTasks = async (req, res) => {
   const response = await service.getUserTasks(req.user.sub);
@@ -113,6 +145,18 @@ const getUserTasks = async (req, res) => {
   res.status(httpStatus.BAD_REQUEST).send(response);
 };
 
+const changeTaskBoard = async (req, res) => {
+  const { taskId } = req.params;
+  const { newBoardId, newListId } = req.body;
+
+  const response = await service.changeTaskBoard(taskId, newBoardId, newListId, req.user.sub);
+
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
+  } else {
+    res.status(httpStatus.BAD_REQUEST).send(response);
+  }
+};
 
 module.exports = {
   getTasksOfBoard,
@@ -124,5 +168,8 @@ module.exports = {
   updateTaskStatus,
   search,
   addMemberToTask,
-  getUserTasks
+  removeMemberFromTask,
+  getUserTasks,
+  changeAssignee,
+  changeTaskBoard
 };

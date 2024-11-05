@@ -153,6 +153,10 @@ const handleTaskNotifications = (
       return generateTaskChangeMessage(user, task.name, changes);
     case "newTask":
       return `${user.firstName} ${user.lastName} created a new task ${task.name}.`;
+    case "assigneeChange":
+      return `${user.firstName} ${user.lastName} assigned the ${task.name} task to you.`;
+    case "boardChange":
+      return `${user.firstName} ${user.lastName} changed board of the ${task.name}.`;
     default:
       return "An unknown task action occurred.";
   }
@@ -223,8 +227,9 @@ const generateTaskChangeMessage = (user, taskName, changes) => {
   if (changes.length === 1) {
     return `${user.firstName} ${user.lastName} updated ${changes[0]} for task ${taskName}.`;
   }
-  return `${user.firstName} ${user.lastName} updated ${changes
-    .join(", ")} for task ${taskName}.`;
+  return `${user.firstName} ${user.lastName} updated ${changes.join(
+    ", "
+  )} for task ${taskName}.`;
 };
 
 const formatComment = (comment) => {

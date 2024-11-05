@@ -14,9 +14,11 @@ const {
   updateTaskStatus,
   search,
   addMemberToTask,
-  getUserTasks
+  getUserTasks,
+  removeMemberFromTask,
+  changeAssignee,
+  changeTaskBoard
 } = require("../controllers/task");
-
 
 router.get(
   "/getTasksOfBoard/:boardId",
@@ -26,12 +28,7 @@ router.get(
   getTasksOfBoard
 );
 
-router.get(
-  "/getUserTasks",
-  verifyWorkspace(),
-  authorize(),
-  getUserTasks
-);
+router.get("/getUserTasks", verifyWorkspace(), authorize(), getUserTasks);
 
 router.get(
   "/search",
@@ -80,7 +77,6 @@ router.delete(
   deleteTask
 );
 
-
 router
   .route("/addMemberToTask/:taskId")
   .post(
@@ -90,5 +86,28 @@ router
     addMemberToTask
   );
 
+router.patch(
+  "/changeAssignee/:taskId",
+  validate(validations.changeAssigneeValidation),
+  authorize(),
+  changeAssignee
+);
+
+router
+  .route("/removeMemberFromTask/:taskId")
+  .delete(
+    verifyWorkspace(),
+    validate(validations.removeMemberFromTaskValidation),
+    authorize(),
+    removeMemberFromTask
+  );
+
+router.patch(
+  "/changeBoard/:taskId",
+  verifyWorkspace(),
+  authorize(),
+  validate(validations.changeBoardValidation),
+  changeTaskBoard
+);
 
 module.exports = router;

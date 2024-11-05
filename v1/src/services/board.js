@@ -11,6 +11,7 @@ const Logger = require("../scripts/logger/board");
 const listService = require("./list");
 const taskService = require("./task");
 const { v4: uuidv4 } = require("uuid");
+const { populate } = require("../models/task");
 
 const getBoardMembers = async (boardId) => {
   try {
@@ -60,6 +61,10 @@ const getBoardById = async (id) => {
           match: { isDeleted: false },
           select:
             "name boardId assignee dueDate priority subtasks statusId parentTask",
+          populate: {
+            path: "members",
+            select: "id _id firstName lastName profilePicture",
+          },
         },
       },
       {
@@ -206,6 +211,18 @@ const addMemberToBoard = async (boardId, userData) => {
       return ApiResponse.fail([new ErrorDetail("User not found")]);
     }
 
+    const workspace = await Workspace.findById(board.workspaceId);
+
+    if (!workspace) {
+      return ApiResponse.fail([new ErrorDetail("Workspace not found")]);
+    }
+
+    if (!workspace.members.includes(user._id)) {
+      return ApiResponse.fail([
+        new ErrorDetail("User is not a member of the workspace"),
+      ]);
+    }
+
     if (!board.members.includes(user._id)) {
       board.members.push(user._id);
       await board.save();
@@ -219,6 +236,40 @@ const addMemberToBoard = async (boardId, userData) => {
   } catch (e) {
     console.error(e);
     return ApiResponse.fail([new ErrorDetail("Failed to add member to board")]);
+  }
+};
+
+const removeMemberFromBoard = async (boardId, userId) => {
+  try {
+    const board = await Board.findById(boardId);
+
+    if (!board) {
+      return ApiResponse.fail([new ErrorDetail("Board not found")]);
+    }
+
+    const user = await userService.getUserById(userId);
+
+    if (!user) {
+      return ApiResponse.fail([new ErrorDetail("User not found")]);
+    }
+
+    const memberIndex = board.members.indexOf(user._id);
+
+    if (memberIndex === -1) {
+      return ApiResponse.fail([
+        new ErrorDetail("User is not a member of this board"),
+      ]);
+    }
+
+    board.members.splice(memberIndex, 1);
+    await board.save();
+
+    return ApiResponse.success(board);
+  } catch (e) {
+    console.error(e);
+    return ApiResponse.fail([
+      new ErrorDetail("Failed to remove member from board"),
+    ]);
   }
 };
 
@@ -256,5 +307,6 @@ module.exports = {
   updateBoard,
   deleteBoard,
   addMemberToBoard,
+  removeMemberFromBoard,
   deleteBoardsByWorkspaceId,
 };

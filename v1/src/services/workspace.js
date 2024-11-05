@@ -60,8 +60,8 @@ const getWorkspacesOfUser = async (user) => {
 const getWorkspaceById = async (id) => {
   try {
     const workspace = await Workspace.findById(id)
-      .populate("members", "firstName lastName profilePicture")
-      .populate("owner", "firstName lastName profilePicture")
+      .populate("members", "id firstName lastName profilePicture")
+      .populate("owner", "id firstName lastName profilePicture")
       .populate("boards", "_id name description");
 
     if (!workspace) {
@@ -241,6 +241,38 @@ const addMemberToWorkspace = async (workspaceId, userData) => {
   }
 };
 
+const removeMemberFromWorkspace = async (workspaceId, userId) => {
+  try {
+    const workspace = await Workspace.findById(workspaceId);
+
+    if (!workspace) {
+      return ApiResponse.fail([new ErrorDetail("Workspace not found")]);
+    }
+
+    const user = await User.findOne({ id: userId }, "_id");
+
+    if (!user) {
+      return ApiResponse.fail([new ErrorDetail("User not found")]);
+    }
+
+    const memberIndex = workspace.members.indexOf(user._id);
+
+    if (memberIndex === -1) {
+      return ApiResponse.fail([
+        new ErrorDetail("User is not a member of this workspace"),
+      ]);
+    }
+
+    workspace.members.splice(memberIndex, 1);
+    await workspace.save();
+
+    return ApiResponse.success(workspace);
+  } catch (e) {
+    console.error(e);
+    return ApiResponse.fail([new ErrorDetail("Failed to remove member from workspace")]);
+  }
+};
+
 module.exports = {
   getAllWorkspaces,
   getWorkspaceById,
@@ -248,5 +280,6 @@ module.exports = {
   createWorkspace,
   updateWorkspace,
   deleteWorkspace,
-  addMemberToWorkspace
+  addMemberToWorkspace,
+  removeMemberFromWorkspace
 };

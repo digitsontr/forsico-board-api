@@ -12,6 +12,7 @@ const ListSchema = new Schema(
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date },
     deletionId: { type: String, default: null },
+    order: { type: Number, unique: true },
   },
   { versionKey: false, timestamps: true }
 );

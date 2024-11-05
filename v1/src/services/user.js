@@ -3,7 +3,7 @@ const baseUrl = process.env.AUTH_API_BASE_URL;
 const User = require("../models/user");
 const redisClient = require("../config/redisClient");
 const ExceptionLogger = require("../scripts/logger/exception");
-
+const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const getUserById = async (userId) => {
   try {
     const user = await User.findOne({ id: userId });
@@ -19,7 +19,7 @@ const fetchUserPermissons = async (userId, workspaceId, accessToken) => {
   const cachedPermissions = await redisClient.get(cacheKey);
 
   if (cachedPermissions) {
-    return cachedPermissions.split(',');
+    return cachedPermissions.split(",");
   }
 
   let data = JSON.stringify({
@@ -50,7 +50,34 @@ const fetchUserPermissons = async (userId, workspaceId, accessToken) => {
     });
 };
 
+const userRegistered = async (userInfo) => {
+  try {
+    const existingUser = await User.findOne({ id: userInfo.Id });
+
+    if (existingUser) {
+      return res
+        .status(200)
+        .json({ message: "User already exists in MongoDB" });
+    }
+
+    const newUser = new User({
+      id: userInfo.Id,
+      firstName: userInfo.FirstName,
+      lastName: userInfo.LastName,
+      profilePicture: userInfo.ProfilePictureUrls || "defauil.jpg",
+      workspaces: [], 
+    });
+
+    await newUser.save();
+
+    return ApiResponse.success(newUser);
+  } catch (error) {
+    return ApiResponse.fail(new ErrorDetail(error.message));
+  }
+};
+
 module.exports = {
   fetchUserPermissons,
-  getUserById
+  getUserById,
+  userRegistered
 };

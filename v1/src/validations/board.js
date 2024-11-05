@@ -24,10 +24,16 @@ const addMemberToBoardValidation = Joi.object({
   boardId: Joi.string().required().min(24).max(24)
 });
 
+const removeMemberFromBoardValidation = Joi.object({
+  userId: Joi.string().required().min(36).max(36),
+  boardId: Joi.string().required().min(24).max(24)
+});
+
 module.exports = {
   createValidation,
   getByIdValidation,
   deleteValidation,
   updateValidation,
-  addMemberToBoardValidation
+  addMemberToBoardValidation,
+  removeMemberFromBoardValidation
 };

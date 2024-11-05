@@ -1,6 +1,7 @@
 const Task = require("../models/task");
 const TaskStatus = require("../models/taskStatus");
 const List = require("../models/list");
+const Board = require("../models/board");
 const Workspace = require("../models/workspace");
 const User = require("../models/user");
 const mongoose = require("mongoose");
@@ -40,6 +41,7 @@ const getTasksOfBoard = async (boardId, workspaceId) => {
 
 const getTaskById = async (id) => {
   try {
+    console.log("ID:", id);
     const task = await Task.findById(
       id,
       "_id name description boardId assignee dueDate ownerId priority entranceDate listId statusId createdAt updatedAt"
@@ -405,19 +407,65 @@ const addMemberToTask = async (taskId, userData) => {
       return ApiResponse.fail([new ErrorDetail("User not found")]);
     }
 
+    const board = await Board.findById(task.boardId);
+
+    if (!board) {
+      return ApiResponse.fail([new ErrorDetail("Board not found")]);
+    }
+
+    if (!board.members.includes(user._id)) {
+      return ApiResponse.fail([
+        new ErrorDetail("User is not a member of the board"),
+      ]);
+    }
+
     if (!task.members.includes(user._id)) {
       task.members.push(user._id);
       await task.save();
     } else {
       return ApiResponse.fail([
-        new ErrorDetail("User is already a member of this board"),
+        new ErrorDetail("User is already a member of this task"),
       ]);
     }
 
-    return ApiResponse.success(board);
+    return ApiResponse.success(task);
   } catch (e) {
     console.error(e);
-    return ApiResponse.fail([new ErrorDetail("Failed to add member to board")]);
+    return ApiResponse.fail([new ErrorDetail("Failed to add member to task")]);
+  }
+};
+
+const removeMemberFromTask = async (taskId, userId) => {
+  try {
+    const task = await Task.findById(taskId);
+
+    if (!task) {
+      return ApiResponse.fail([new ErrorDetail("Task not found")]);
+    }
+
+    const user = await userService.getUserById(userId);
+
+    if (!user) {
+      return ApiResponse.fail([new ErrorDetail("User not found")]);
+    }
+
+    const memberIndex = task.members.indexOf(user._id);
+
+    if (memberIndex === -1) {
+      return ApiResponse.fail([
+        new ErrorDetail("User is not a member of this task"),
+      ]);
+    }
+
+    task.members.splice(memberIndex, 1);
+    await task.save();
+
+    return ApiResponse.success(task);
+  } catch (e) {
+    console.error(e);
+    return ApiResponse.fail([
+      new ErrorDetail("Failed to remove member from task"),
+    ]);
   }
 };
 
@@ -464,6 +512,126 @@ const getUserTasks = async (userId) => {
   }
 };
 
+const changeTaskAssignee = async (taskId, newAssigneeId, userId) => {
+  try {
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return ApiResponse.fail([new ErrorDetail("Task not found")]);
+    }
+
+    const user = await User.findOne(
+      { id: userId },
+      "_id id firstName lastName profilePicture"
+    );
+    const toUser = await User.findOne({ id: newAssigneeId }, "_id id");
+
+    task.assignee = toUser._id;
+    await task.save();
+
+    await logAndPublishNotification("Task", "assigneeChange", {
+      user,
+      task,
+      workspaceId: task.workspaceId,
+      boardId: task.boardId,
+      taskId: task._id,
+      targetId: task._id,
+      newAssigneeId: newAssigneeId,
+    });
+
+    const updatedTask = await Task.findById(taskId).populate(
+      "assignee",
+      "firstName lastName profilePicture"
+    );
+
+    return ApiResponse.success(updatedTask);
+  } catch (e) {
+    Logger.log({
+      level: "error",
+      message: `Error changing assignee: ${e.message}`,
+    });
+    return ApiResponse.fail([new ErrorDetail("Failed to change assignee")]);
+  }
+};
+
+const changeTaskBoard = async (taskId, newBoardId, newListId, userId) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const task = await Task.findById(taskId).session(session);
+    if (!task) {
+      throw new Error("Task not found");
+    }
+    const oldListId = task.listId;
+
+    if (oldListId) {
+      const oldList = await List.findById(oldListId).session(session);
+      if (oldList) {
+        oldList.tasks.pull(task._id);
+        await oldList.save({ session });
+      }
+    }
+
+    task.boardId = newBoardId;
+    task.listId = newListId;
+    await task.save({ session });
+
+    const newList = await List.findById(newListId).session(session);
+    if (newList) {
+      newList.tasks.push(task._id);
+      await newList.save({ session });
+    }
+
+    const subtasks = await Task.find({ parentTask: taskId }).session(session);
+    await Promise.all(
+      subtasks.map(async (subtask) => {
+        if (oldListId) {
+          const oldList = await List.findById(oldListId).session(session);
+          if (oldList) {
+            oldList.tasks.pull(subtask._id);
+            await oldList.save({ session });
+          }
+        }
+
+        subtask.boardId = newBoardId;
+        subtask.listId = newListId;
+        await subtask.save({ session });
+
+        if (newList) {
+          newList.tasks.push(subtask._id);
+          await newList.save({ session });
+        }
+      })
+    );
+
+    const user = await User.findOne(
+      { id: userId },
+      "_id id firstName lastName profilePicture"
+    );
+
+    await logAndPublishNotification("Task", "boardChange", {
+      user,
+      task,
+      workspaceId: task.workspaceId,
+      boardId: task.boardId,
+      taskId: task._id,
+      targetId: task._id,
+      newBoardId: newBoardId,
+    });
+
+    await session.commitTransaction();
+    session.endSession();
+    return ApiResponse.success(task);
+  } catch (e) {
+    await session.abortTransaction();
+    session.endSession();
+    Logger.log({
+      level: "error",
+      message: `Error changing task board: ${e.message}`,
+    });
+    return ApiResponse.fail([new ErrorDetail("Failed to change task board")]);
+  }
+};
+
 module.exports = {
   getTasksOfBoard,
   getTaskById,
@@ -476,4 +644,7 @@ module.exports = {
   deleteTaskByBoard,
   addMemberToTask,
   getUserTasks,
+  removeMemberFromTask,
+  changeTaskAssignee,
+  changeTaskBoard,
 };

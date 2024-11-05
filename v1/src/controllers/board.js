@@ -53,7 +53,18 @@ const addMemberToBoard = async (req, res) => {
   const response = await service.addMemberToBoard(req.params.boardId, req.body);
 
   if (response.status) {
-    res.status(httpStatus.CREATED).send(response);
+    res.status(httpStatus.OK).send(response);
+    return;
+  }
+
+  res.status(httpStatus.BAD_REQUEST).send(response);
+};
+
+const removeMemberFromBoard = async (req, res) => {
+  const response = await service.removeMemberFromBoard(req.params.boardId, req.body.userId);
+
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
     return;
   }
 
@@ -90,4 +101,5 @@ module.exports = {
   updateBoard,
   deleteBoard,
   addMemberToBoard,
+  removeMemberFromBoard
 };

@@ -12,21 +12,23 @@ const jwtSettings = {
 const verifyToken = (req, res, next) => {
   const token = req.headers["authorization"]?.split(" ")[1];
 
-  if (isTokenExpired(token)) {
+  if (!req.url.includes("webhook") && isTokenExpired(token)) {
     return res
       .status(UNAUTHORIZED)
       .json(ApiResponse.fail([new ErrorDetail("Invalid access token!")]));
   }
 
   try {
-    const decoded = jwt.verify(token, jwtSettings.secretKey, {
-      issuer: jwtSettings.issuer,
-      audience: jwtSettings.audience,
-      algorithms: ["HS256"],
-    });
+    if (!req.url.includes("webhook")) {
+      const decoded = jwt.verify(token, jwtSettings.secretKey, {
+        issuer: jwtSettings.issuer,
+        audience: jwtSettings.audience,
+        algorithms: ["HS256"],
+      });
 
-    req.user = decoded;
-    req.accessToken = token;
+      req.user = decoded;
+      req.accessToken = token;
+    }
 
     next();
   } catch (err) {

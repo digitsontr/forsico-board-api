@@ -12,9 +12,9 @@ const {
   getBoardMembers,
   updateBoard,
   deleteBoard,
-  addMemberToBoard
+  addMemberToBoard,
+  removeMemberFromBoard
 } = require("../controllers/board");
-
 
 router.get(
   "/getboardsofworkspace/",
@@ -69,6 +69,15 @@ router
     validate(validations.addMemberToBoardValidation),
     authorize(),
     addMemberToBoard
+  );
+
+router
+  .route("/removeMemberFromBoard/:boardId")
+  .delete(
+    verifyWorkspace(),
+    validate(validations.removeMemberFromBoardValidation),
+    authorize(),
+    removeMemberFromBoard
   );
 
 module.exports = router;

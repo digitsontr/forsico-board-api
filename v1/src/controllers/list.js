@@ -56,10 +56,23 @@ const deleteList = async (req, res) => {
   res.status(httpStatus.BAD_REQUEST).send(response);
 };
 
+
+const updateMultipleListOrders = async (req, res) => {
+  const response = await service.updateMultipleListOrders(req.body);
+
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
+    return;
+  }
+
+  res.status(httpStatus.BAD_REQUEST).send(response);
+};
+
 module.exports = {
     getListsOfBoard,
     getListById,
     createList,
     updateList,
-    deleteList
+    deleteList,
+    updateMultipleListOrders
 };

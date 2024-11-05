@@ -63,7 +63,19 @@ const addMemberToWorkspace = async (req, res) => {
   const response = await service.addMemberToWorkspace(req.workspaceId, req.body);
 
   if (response.status) {
-    res.status(httpStatus.CREATED).send(response);
+    res.status(httpStatus.OK).send(response);
+    return;
+  }
+
+  res.status(httpStatus.BAD_REQUEST).send(response);
+};
+
+
+const removeMemberFromWorkspace = async (req, res) => {
+  const response = await service.removeMemberFromWorkspace(req.workspaceId, req.body.userId);
+
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
     return;
   }
 
@@ -89,4 +101,5 @@ module.exports = {
   updateWorkspace,
   deleteWorkspace,
   addMemberToWorkspace,
+  removeMemberFromWorkspace
 };

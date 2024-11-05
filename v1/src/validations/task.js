@@ -55,6 +55,21 @@ const addMemberToTaskValidation = Joi.object({
   taskId: Joi.string().required().min(24).max(24)
 });
 
+const removeMemberFromTaskValidation = Joi.object({
+  userId: Joi.string().required().min(36).max(36),
+  taskId: Joi.string().required().min(24).max(24)
+});
+
+const changeAssigneeValidation = Joi.object({
+  taskId: Joi.string().required().min(24).max(24),
+  newAssigneeId: Joi.string().required().min(36).max(36),
+});
+
+const changeBoardValidation = Joi.object({
+  taskId: Joi.string().required().min(24).max(24),
+  newBoardId: Joi.string().required().min(24).max(24),
+  newListId: Joi.string().required().min(24).max(24),
+});
 
 module.exports = {
   createTaskValidation,
@@ -65,4 +80,7 @@ module.exports = {
   updateTaskStatusValidation,
   searchTaskValidation,
   addMemberToTaskValidation,
+  removeMemberFromTaskValidation,
+  changeAssigneeValidation,
+  changeBoardValidation
 };

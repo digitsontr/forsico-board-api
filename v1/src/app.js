@@ -14,6 +14,7 @@ const {
   ChecklistRoutes,
   NotificationRoutes,
   PutBackRoutes,
+  WebHookRoutes,
 } = require("./routes");
 const cronJob = require("./scripts/helpers/cronJob");
 
@@ -42,4 +43,5 @@ app.listen(PORT, () => {
   app.use("/checklist", ChecklistRoutes);
   app.use("/notification", NotificationRoutes);
   app.use("/putback", PutBackRoutes)
+  app.use("/webhook", WebHookRoutes)
 });

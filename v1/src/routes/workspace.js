@@ -11,6 +11,7 @@ const {
   updateWorkspace,
   deleteWorkspace,
   addMemberToWorkspace,
+  removeMemberFromWorkspace
 } = require("../controllers/workspace");
 const verifyWorkspace = require("../middlewares/verifyWorkspace");
 
@@ -25,6 +26,15 @@ router
     validate(validations.addMemberToWorkspaceValidation),
     authorize(),
     addMemberToWorkspace
+  );
+
+router
+  .route("/removeMemberFromWorkspace")
+  .delete(
+    verifyWorkspace(),
+    validate(validations.removeMemberFromWorkspaceValidation),
+    authorize("OWNER"),
+    removeMemberFromWorkspace
   );
 
 router
