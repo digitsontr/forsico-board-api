@@ -17,7 +17,6 @@ const createValidation = Joi.object({
   color: Joi.string()
     .optional()
     .regex(/^#[0-9A-F]{6}$/i),
-  order: Joi.number().optional(),
 });
 
 const updateValidation = Joi.object({

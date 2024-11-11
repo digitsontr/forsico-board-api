@@ -19,7 +19,8 @@ const userService = require("../services/user");
 
 const getTasksOfBoard = async (boardId, workspaceId) => {
   try {
-    const tasks = await Task.find({ boardId: boardId, workspaceId })
+    console.log("board id", boardId);
+    const tasks = await Task.find({ boardId: boardId, workspaceId: workspaceId })
       .populate("assignee", "firstName lastName profilePicture")
       .populate([
         {
@@ -32,6 +33,7 @@ const getTasksOfBoard = async (boardId, workspaceId) => {
         { path: "members", select: "_id id firstName lastName profilePicture" },
       ])
       .populate("statusId", "_id name");
+      console.log("Tasks", tasks);
     return ApiResponse.success(tasks);
   } catch (e) {
     console.error(e);
@@ -66,6 +68,7 @@ const updateTaskStatus = async (taskId, newStatusId, userId) => {
       { id: userId },
       "_id id firstName lastName profilePicture"
     );
+
     const task = await Task.findById(taskId);
     if (!task) {
       return ApiResponse.fail([new ErrorDetail("Task not found")]);
@@ -76,8 +79,28 @@ const updateTaskStatus = async (taskId, newStatusId, userId) => {
       return ApiResponse.fail([new ErrorDetail("Status not found")]);
     }
 
+    const newListId = status.listId;
+    if (!newListId) {
+      return ApiResponse.fail([new ErrorDetail("No list associated with the new status")]);
+    }
+    
+    if (task.listId) {
+      const oldList = await List.findById(task.listId);
+      if (oldList) {
+        oldList.tasks.pull(task._id);
+        await oldList.save();
+      }
+    }
+
     task.statusId = newStatusId;
+    task.listId = newListId;
     await task.save();
+
+    const newList = await List.findById(newListId);
+    if (newList) {
+      newList.tasks.push(task._id);
+      await newList.save();
+    }
 
     const updatedTask = await Task.findById(taskId)
       .populate("assignee", "firstName lastName profilePicture")
@@ -209,14 +232,18 @@ const updateTask = async (id, updateData, userId) => {
     if (updateData.listId && task.listId.toString() !== updateData.listId) {
       const taskIds = [
         task._id,
-        ...task.subtasks.map((subtask) => {
-          return subtask;
-        }),
+        ...task.subtasks.map((subtask) => subtask),
       ];
-      console.log("TASK IDS", taskIds);
+    
+      const newStatus = await TaskStatus.findOne({ listId: updateData.listId });
+      
       await Promise.allSettled(
         taskIds.map(async (taskId) => {
           await moveTaskToNewList(taskId, task.listId, updateData.listId);
+    
+          if (newStatus) {
+            await Task.findByIdAndUpdate(taskId, { statusId: newStatus._id });
+          }
         })
       );
     }

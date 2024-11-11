@@ -1,5 +1,7 @@
 const List = require("../models/list");
 const Board = require("../models/board");
+const User = require("../models/user");
+const TaskStatus = require("../models/taskStatus");
 const mongoose = require("mongoose");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const Logger = require("../scripts/logger/list");
@@ -39,7 +41,11 @@ const getListById = async (id) => {
   }
 };
 
-const createList = async (listData, workspaceId) => {
+const createList = async (listData, workspaceId, ownerId) => {
+  const user = await User.findOne(
+    { id: ownerId },
+    "_id id firstName lastName profilePicture"
+  );
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -49,12 +55,8 @@ const createList = async (listData, workspaceId) => {
       throw new Error("Board not found");
     }
 
-    const maxOrderList = await List.findOne({
-      boardId: listData.boardId,
-    })
-      .sort({
-        order: -1,
-      })
+    const maxOrderList = await List.findOne({ boardId: listData.boardId })
+      .sort({ order: -1 })
       .exec();
     const nextOrder = maxOrderList ? maxOrderList.order + 1 : 1;
 
@@ -66,15 +68,22 @@ const createList = async (listData, workspaceId) => {
       order: nextOrder,
     });
 
-    const savedList = await listModel.save({
-      session,
-    });
+    const savedList = await listModel.save({ session });
 
     board.lists = board.lists || [];
     board.lists.push(savedList._id);
-    await board.save({
-      session,
+    await board.save({ session });
+
+    const taskStatus = new TaskStatus({
+      name: listData.name,    
+      color: listData.color || "#f2f2f2",
+      boardId: listData.boardId,
+      workspaceId: workspaceId,
+      createdBy: user._id,
+      listId: savedList._id,       
     });
+
+    await taskStatus.save({ session });
 
     await session.commitTransaction();
     session.endSession();

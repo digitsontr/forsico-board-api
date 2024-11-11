@@ -24,7 +24,7 @@ const getListById = async (req, res) => {
 };
 
 const createList = async (req, res) => {
-  const response = await service.createList(req.body, req.workspaceId);
+  const response = await service.createList(req.body, req.workspaceId, req.user.sub);
 
   if (response.status) {
     res.status(httpStatus.CREATED).send(response);

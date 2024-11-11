@@ -1,6 +1,7 @@
 const Board = require("../models/board");
 const Workspace = require("../models/workspace");
 const User = require("../models/user");
+const TaskStatus = require("../models/taskStatus");
 const List = require("../models/list");
 const mongoose = require("mongoose");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
@@ -104,40 +105,38 @@ const createBoard = async (workspaceId, userId, boardData) => {
       workspaceId: workspaceId,
     });
 
-    const savedBoardPromise = boardModel.save({ session });
-
-    const taskStatusPromise = taskStatusService.createDefaultTaskStatuses(
-      boardModel._id,
-      workspaceId,
-      user._id
-    );
-
-    const [savedBoard, statusResponse] = await Promise.all([
-      savedBoardPromise,
-      taskStatusPromise,
-    ]);
-
-    if (!statusResponse.status) {
-      throw new Error("Failed to create default task status");
-    }
-
-    const defaultLists = [
-      {
-        name: "Backlog",
-        boardId: savedBoard._id,
-        workspaceId,
-        color: "#ED1E5A",
-      },
-      {
-        name: "In Progress",
-        boardId: savedBoard._id,
-        workspaceId,
-        color: "#36C5F0",
-      },
-      { name: "Done", boardId: savedBoard._id, workspaceId, color: "#A1F679" },
+    const savedBoard = await boardModel.save({ session });
+    const defaultItems = [
+      { name: "Backlog", color: "#ED1E5A", order: 1 },
+      { name: "In Progress", color: "#36C5F0", order: 2 },
+      { name: "Done", color: "#A1F679", order: 3 },
     ];
 
-    const createdLists = await List.insertMany(defaultLists, { session });
+    const createdLists = [];
+    const createdStatuses = [];
+
+    for (const item of defaultItems) {
+      const list = new List({
+        name: item.name,
+        boardId: savedBoard._id,
+        workspaceId,
+        color: item.color,
+        order: item.order,
+      });
+      const savedList = await list.save({ session });
+      createdLists.push(savedList);
+
+      const taskStatus = new TaskStatus({
+        name: item.name,
+        color: item.color,
+        boardId: savedBoard._id,
+        workspaceId,
+        createdBy: user._id,
+        listId: savedList._id,
+      });
+      const savedStatus = await taskStatus.save({ session });
+      createdStatuses.push(savedStatus);
+    }
 
     savedBoard.lists = createdLists.map((list) => list._id);
     savedBoard.members.push(user._id);
