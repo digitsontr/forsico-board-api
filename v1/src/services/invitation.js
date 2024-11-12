@@ -65,7 +65,7 @@ const createInvitations = async (
 };
 
 const acceptInvitation = async (invitationId, user) => {
-  let existingUser = await User.findOne({ id: user.sub }).session(session);
+  let existingUser = await User.findOne({ id: user.sub });
 
   let userToSave;
   if (!existingUser) {
@@ -74,14 +74,12 @@ const acceptInvitation = async (invitationId, user) => {
       firstName: user.name,
       lastName: user.family_name,
       profilePicture: user.picture,
-      workspaces: [savedWorkspace._id],
     });
   } else {
-    existingUser.workspaces.push(savedWorkspace._id);
     userToSave = existingUser;
   }
 
-  await userToSave.save({ session });
+  await userToSave.save();
 
   const invitation = await Invitation.findById(invitationId);
   if (!invitation || invitation.status !== "pending")
@@ -90,8 +88,10 @@ const acceptInvitation = async (invitationId, user) => {
   const board = await Board.findById(invitation.boardId);
   const workspace = await Workspace.findById(invitation.workspaceId);
 
-  if (!workspace.members.includes(userToSave._id)) workspace.members.push(userToSave._id);
-  if (!board.members.includes(userToSave._id)) board.members.push(userToSave._id);
+  if (!workspace.members.includes(userToSave._id))
+    workspace.members.push(userToSave._id);
+  if (!board.members.includes(userToSave._id))
+    board.members.push(userToSave._id);
 
   invitation.status = "accepted";
   await invitation.save();
