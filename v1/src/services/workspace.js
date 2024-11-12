@@ -34,6 +34,7 @@ const getWorkspacesOfUser = async (user) => {
       "name description owner members"
     ).populate({
       path: "boards",
+      match: { members: userEntity._id },
       select: "id name members",
       options: { sort: { createdAt: 1 } },
       populate: [

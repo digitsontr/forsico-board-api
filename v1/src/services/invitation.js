@@ -2,9 +2,15 @@ const Invitation = require("../models/invitation");
 const User = require("../models/user");
 const Workspace = require("../models/workspace");
 const Board = require("../models/board");
+const emailService = require("./email");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 
-const createInvitations = async (inviterId, inviteeEmails, boardId) => {
+const createInvitations = async (
+  inviterId,
+  inviteeEmails,
+  boardId,
+  accessToken
+) => {
   const board = await Board.findById(boardId);
   if (!board) return ApiResponse.fail([new ErrorDetail("Board not found")]);
 
@@ -41,6 +47,13 @@ const createInvitations = async (inviterId, inviteeEmails, boardId) => {
         status: "pending",
       });
 
+      await emailService.sendEmail({
+        to: email,
+        subject: "You've invited to the new board!",
+        htmlPath: "./v1/src/assets/inviteBoardMailTemplate.html",
+        accessToken: accessToken,
+      });
+
       await invitation.save();
       results.success.push(invitation);
     } catch (error) {
@@ -51,15 +64,24 @@ const createInvitations = async (inviterId, inviteeEmails, boardId) => {
   return ApiResponse.success(results);
 };
 
-const acceptInvitation = async (invitationId, userId) => {
-  const user = await User.findOne(
-    { id: userId },
-    "_id id firstName lastName profilePicture"
-  );
- 
-  if(user === null){
-    return ApiResponse.fail([new ErrorDetail("User not found")]);
+const acceptInvitation = async (invitationId, user) => {
+  let existingUser = await User.findOne({ id: user.sub }).session(session);
+
+  let userToSave;
+  if (!existingUser) {
+    userToSave = new User({
+      id: user.sub,
+      firstName: user.name,
+      lastName: user.family_name,
+      profilePicture: user.picture,
+      workspaces: [savedWorkspace._id],
+    });
+  } else {
+    existingUser.workspaces.push(savedWorkspace._id);
+    userToSave = existingUser;
   }
+
+  await userToSave.save({ session });
 
   const invitation = await Invitation.findById(invitationId);
   if (!invitation || invitation.status !== "pending")
@@ -68,8 +90,8 @@ const acceptInvitation = async (invitationId, userId) => {
   const board = await Board.findById(invitation.boardId);
   const workspace = await Workspace.findById(invitation.workspaceId);
 
-  if (!workspace.members.includes(user._id)) workspace.members.push(user._id);
-  if (!board.members.includes(user._id)) board.members.push(user._id);
+  if (!workspace.members.includes(userToSave._id)) workspace.members.push(userToSave._id);
+  if (!board.members.includes(userToSave._id)) board.members.push(userToSave._id);
 
   invitation.status = "accepted";
   await invitation.save();

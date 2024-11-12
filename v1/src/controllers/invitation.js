@@ -3,12 +3,12 @@ const httpStatus = require("http-status");
 
 const inviteUserToBoard = async (req, res) => {
     const { inviterId, inviteeEmails, boardId } = req.body;
-    const response = await service.createInvitations(req.user.sub, inviteeEmails, boardId);
+    const response = await service.createInvitations(req.user.sub, inviteeEmails, boardId, req.accessToken);
     res.status(response.status ? httpStatus.OK : httpStatus.BAD_REQUEST).send(response);
 };
 
 const acceptInvitation = async (req, res) => {
-    const response = await service.acceptInvitation(req.params.invitationId, req.user.sub);
+    const response = await service.acceptInvitation(req.params.invitationId, req.user);
     res.status(response.status ? httpStatus.OK : httpStatus.BAD_REQUEST).send(response);
 };
 
