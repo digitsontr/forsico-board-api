@@ -24,7 +24,7 @@ const getBoardMembers = async (req, res) => {
 };
 
 const getBoardById = async (req, res) => {
-  const response = await service.getBoardById(req.params.boardId);
+  const response = await service.getBoardById(req.params.boardId, req.workspaceId);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);

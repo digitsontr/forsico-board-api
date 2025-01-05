@@ -13,6 +13,7 @@ const listService = require("./list");
 const taskService = require("./task");
 const { v4: uuidv4 } = require("uuid");
 const { populate } = require("../models/task");
+const { CacheService, CACHE_TTL } = require('./cache');
 
 const getBoardMembers = async (boardId) => {
   try {
@@ -47,41 +48,121 @@ const getBoardsOfWorkspace = async (workspaceId) => {
   }
 };
 
-const getBoardById = async (id) => {
+const getBoardById = async (id, workspaceId) => {
   try {
-    const board = await Board.findById(
-      id,
-      "name description workspaceId"
-    ).populate([
-      {
-        path: "lists",
-        match: { isDeleted: false },
-        select: "name tasks color",
-        populate: {
-          path: "tasks",
+    const cacheKey = CacheService.generateKey(workspaceId, 'board', id);
+    
+    // Try to get from cache
+    const cachedBoard = await CacheService.get(cacheKey);
+    if (cachedBoard) {
+      return ApiResponse.success(cachedBoard);
+    }
+
+    const board = await Board.findById(id, "name description workspaceId")
+      .populate([
+        {
+          path: "lists",
           match: { isDeleted: false },
-          select:
-            "name boardId assignee dueDate priority subtasks statusId parentTask",
-          populate: {
-            path: "members",
-            select: "id _id firstName lastName profilePicture",
+          select: "name tasks color order",
+          options: { 
+            sort: { order: 1 },
+            lean: true 
           },
+          populate: {
+            path: "tasks",
+            match: { isDeleted: false },
+            select: "name boardId assignee dueDate priority subtasks statusId parentTask createdAt",
+            options: {
+              sort: {
+                // First by priority (higher number = higher priority)
+                priority: -1,
+                // Then by due date (closer = higher priority)
+                dueDate: 1,
+                // Finally by creation date
+                createdAt: 1
+              }
+            },
+            populate: {
+              path: "members",
+              select: "id _id firstName lastName profilePicture",
+            },
+          }
         },
-      },
-      {
-        path: "members",
-        select: "_id firstName lastName profilePicture id",
-      },
-    ]);
+        {
+          path: "members",
+          select: "_id firstName lastName profilePicture id",
+          options: { lean: true }
+        }
+      ])
+      .lean();
+
     if (!board) {
       Logger.error(`Board not found: boardId=${id}`);
       return ApiResponse.fail([new ErrorDetail("Board not found")]);
     }
+
+    // Add urgency level to tasks
+    if (board.lists) {
+      board.lists.forEach(list => {
+        if (list.tasks) {
+          list.tasks = list.tasks.map(task => ({
+            ...task,
+            urgencyLevel: calculateUrgencyLevel(task)
+          }));
+        }
+      });
+    }
+
+    // Cache the board data
+    await CacheService.set(cacheKey, board, CACHE_TTL.BOARD);
+
     return ApiResponse.success(board);
   } catch (e) {
     Logger.error(e);
     return ApiResponse.fail([new ErrorDetail("Failed to retrieve board")]);
   }
+};
+
+// Helper function to calculate task urgency
+const calculateUrgencyLevel = (task) => {
+  let urgencyScore = 0;
+  const now = new Date();
+
+  // Priority based score (0-5) * 20 = max 100 points
+  urgencyScore += (task.priority || 0) * 20;
+
+  // Due date based score
+  if (task.dueDate) {
+    const dueDate = new Date(task.dueDate);
+    const daysUntilDue = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+
+    if (daysUntilDue < 0) {
+      // Overdue tasks get maximum urgency
+      urgencyScore += 100;
+    } else if (daysUntilDue === 0) {
+      // Due today
+      urgencyScore += 90;
+    } else if (daysUntilDue <= 2) {
+      // Due in next 2 days
+      urgencyScore += 80;
+    } else if (daysUntilDue <= 7) {
+      // Due in next week
+      urgencyScore += 60;
+    } else if (daysUntilDue <= 14) {
+      // Due in next 2 weeks
+      urgencyScore += 40;
+    } else {
+      // Due in more than 2 weeks
+      urgencyScore += 20;
+    }
+  }
+
+  // Convert score to level
+  if (urgencyScore >= 150) return 'CRITICAL';
+  if (urgencyScore >= 120) return 'HIGH';
+  if (urgencyScore >= 80) return 'MEDIUM';
+  if (urgencyScore >= 40) return 'LOW';
+  return 'NORMAL';
 };
 
 const createBoard = async (workspaceId, userId, boardData) => {
@@ -163,11 +244,15 @@ const updateBoard = async (id, updateData) => {
     const updatedBoard = await Board.findByIdAndUpdate(id, updateData, {
       new: true,
     });
+
     if (!updatedBoard) {
-      return ApiResponse.fail([
-        new ErrorDetail("Board not found or update failed"),
-      ]);
+      return ApiResponse.fail([new ErrorDetail("Board not found or update failed")]);
     }
+
+    // Invalidate board cache
+    const cacheKey = CacheService.generateKey(updatedBoard.workspaceId, 'board', id);
+    await CacheService.del(cacheKey);
+
     return ApiResponse.success(updatedBoard);
   } catch (e) {
     return ApiResponse.fail([new ErrorDetail("Failed to update board")]);
