@@ -58,7 +58,8 @@ const deleteList = async (req, res) => {
 
 
 const updateMultipleListOrders = async (req, res) => {
-  const response = await service.updateMultipleListOrders(req.body);
+  console.log("reg params",req.params);
+  const response = await service.updateMultipleListOrders({...req.body, ...req.params});
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);

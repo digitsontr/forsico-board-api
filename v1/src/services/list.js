@@ -118,58 +118,41 @@ const updateList = async (id, updateData) => {
       if (conflictingList) {
         await List.findByIdAndUpdate(
           conflictingList._id,
-          {
-            order: -1,
-          },
-          {
-            session,
-          }
+          { order: listToUpdate.order },
+          { session }
         );
 
-        await List.findByIdAndUpdate(
+        const updatedList = await List.findByIdAndUpdate(
           id,
-          {
-            ...updateData,
-            order: updateData.order,
-          },
-          {
-            session,
-            new: true,
-          }
+          { ...updateData },
+          { session, new: true }
         );
 
-        await List.findByIdAndUpdate(
-          conflictingList._id,
-          {
-            order: listToUpdate.order,
-          },
-          {
-            session,
-          }
-        );
-      } else {
-        await List.findByIdAndUpdate(id, updateData, {
-          session,
-          new: true,
-        });
+        await session.commitTransaction();
+        session.endSession();
+
+        return ApiResponse.success(updatedList);
       }
-    } else {
-      await List.findByIdAndUpdate(id, updateData, {
-        session,
-        new: true,
-      });
     }
+
+    const updatedList = await List.findByIdAndUpdate(
+      id,
+      updateData,
+      { session, new: true }
+    );
 
     await session.commitTransaction();
     session.endSession();
 
     return ApiResponse.success(updatedList);
+
   } catch (e) {
     await session.abortTransaction();
     session.endSession();
     Logger.log({
       level: "error",
       message: `Error updating list: ${e.message}`,
+      error: e.stack
     });
     return ApiResponse.fail([new ErrorDetail("Failed to update list")]);
   }
@@ -208,44 +191,93 @@ const deleteList = async (listId, deletionId) => {
   }
 };
 
-const updateMultipleListOrders = async (updateData) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+const updateMultipleListOrders = async ({ orderUpdates, boardId }) => {
+  let session;
   try {
+    // Start session
+    session = await mongoose.startSession();
+    session.startTransaction();
+
+    // Validate board exists
+    const board = await Board.findById(boardId).session(session);
+    if (!board) {
+      console.error("Board not found", boardId);
+      return ApiResponse.fail([new ErrorDetail("Board not found")]);
+    }
+
+    // Get all affected lists in one query - with session
+    const listIds = orderUpdates.map(update => update.listId);
+    const existingLists = await List.find({ 
+      _id: { $in: listIds },
+      boardId: boardId,
+      isDeleted: false 
+    }).session(session);
+
+    // Validate all lists exist and belong to the board
+    if (existingLists.length !== listIds.length) {
+      return ApiResponse.fail([new ErrorDetail("One or more lists not found")]);
+    }
+
+    // Validate no duplicate orders
+    const orders = orderUpdates.map(u => u.order);
+    if (new Set(orders).size !== orders.length) {
+      return ApiResponse.fail([new ErrorDetail("Duplicate order values not allowed")]);
+    }
+
+    // Perform updates sequentially within the transaction
     const updatedLists = [];
-    for (const { listId, order } of updateData.orderUpdates) {
-      const list = await List.findById(listId).session(session);
-
-      if (!list) {
-        throw new Error(`List with ID ${listId} not found`);
-      }
-
-      let updatedList = await List.findByIdAndUpdate(
-        listId,
-        {
-          order,
-        },
-        {
+    for (const update of orderUpdates) {
+      const updatedList = await List.findByIdAndUpdate(
+        update.listId,
+        { order: update.order },
+        { 
           session,
           new: true,
+          runValidators: true
         }
       );
-
       updatedLists.push(updatedList);
     }
 
+    // Commit the transaction
     await session.commitTransaction();
-    session.endSession();
-
+    
     return ApiResponse.success(updatedLists);
+
   } catch (e) {
-    await session.abortTransaction();
-    session.endSession();
+    // Proper error handling and logging
     Logger.log({
       level: "error",
       message: `Error updating list orders: ${e.message}`,
+      error: e.stack,
+      data: { orderUpdates, boardId }
     });
+
+    if (session) {
+      try {
+        await session.abortTransaction();
+      } catch (abortError) {
+        Logger.log({
+          level: "error",
+          message: "Error aborting transaction",
+          error: abortError.stack
+        });
+      }
+    }
+
     return ApiResponse.fail([new ErrorDetail("Failed to update list orders")]);
+  } finally {
+    if (session) {
+      try {
+        session.endSession();
+      } catch (endError) {
+        Logger.log({
+          level: "error",
+          message: "Error ending session",
+          error: endError.stack
+        });
+      }
+    }
   }
 };
 

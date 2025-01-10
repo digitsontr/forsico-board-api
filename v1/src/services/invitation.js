@@ -112,19 +112,34 @@ const declineInvitation = async (invitationId) => {
 
 const getInvitationsForUser = async (email) => {
   try {
-    const invitations = await Invitation.find({
+    // Get invitations received by the user
+    const receivedInvitations = await Invitation.find({
       inviteeEmail: email,
-      status: "pending",
+      status: "pending"
     })
       .populate("inviterId", "firstName lastName email")
       .populate("boardId", "name")
       .populate("workspaceId", "name");
 
-    return ApiResponse.success(invitations);
+    // Get invitations sent by the user
+    const user = await User.findOne({ email });
+    const sentInvitations = await Invitation.find({
+      inviterId: user?._id,
+      status: "pending"
+    })
+      .populate("inviterId", "firstName lastName email")
+      .populate("boardId", "name")
+      .populate("workspaceId", "name");
+
+    return ApiResponse.success({
+      received: receivedInvitations,
+      sent: sentInvitations
+    });
+
   } catch (e) {
-    console.error("Error fetching invitations for user:", e);
+    console.error("Error fetching invitations:", e);
     return ApiResponse.fail([
-      new ErrorDetail("Failed to retrieve invitations"),
+      new ErrorDetail("Failed to retrieve invitations")
     ]);
   }
 };
