@@ -527,7 +527,7 @@ const getUserTasks = async (userId) => {
           $or: [{ members: user._id }, { assignee: user._id }],
         })
           .select(
-            "name boardId assignee dueDate priority subtasks statusId parentTask"
+            "name boardId assignee dueDate priority subtasks statusId parentTask listId"
           )
           .populate("statusId", "_id name");
 
