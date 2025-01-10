@@ -1,29 +1,55 @@
 const redis = require("redis");
 const Logger = require("../scripts/logger/board");
 
+let redisClient = null;
+
 const createRedisClient = async () => {
-  const client = redis.createClient({
-    url: 'redis://forsicoRedisCache.redis.cache.windows.net:6379',
-    password: 'j1hRUVSdyRqq3ss4608oA0IuHIGpoI17UAzCaL4hUvI='
-  });
+  try {
+    if (redisClient !== null) {
+      return redisClient;
+    }
 
-  client.on('error', (err) => Logger.log('error', 'Redis Client Error:', err));
-  client.on('connect', () => Logger.log('info', 'Redis Client Connected'));
-  client.on('ready', () => Logger.log('info', 'Redis Client Ready'));
-  client.on('reconnecting', () => Logger.log('warn', 'Redis Client Reconnecting'));
+    const client = redis.createClient({
+      url: 'redis://forsicoRedisCache.redis.cache.windows.net:6379',
+      password: 'j1hRUVSdyRqq3ss4608oA0IuHIGpoI17UAzCaL4hUvI=',
+      socket: {
+        connectTimeout: 10000,
+        keepAlive: 5000,
+        reconnectStrategy: (retries) => Math.min(retries * 100, 3000)
+      }
+    });
 
-  await client.connect();
+    client.on('error', (err) => {
+      Logger.log('error', 'Redis Client Error:', err);
+    });
 
-  return client;
-};
+    client.on('connect', () => Logger.log('info', 'Redis Client Connected'));
+    client.on('ready', () => Logger.log('info', 'Redis Client Ready'));
+    client.on('reconnecting', () => Logger.log('warn', 'Redis Client Reconnecting'));
+    client.on('end', () => {
+      Logger.log('warn', 'Redis Client Connection Ended');
+      redisClient = null;
+    });
 
-let redisClient;
-
-const getClient = async () => {
-  if (!redisClient) {
-    redisClient = await createRedisClient();
+    await client.connect();
+    redisClient = client;
+    return client;
+  } catch (error) {
+    Logger.log('error', 'Failed to create Redis client:', error);
+    return null;
   }
-  return redisClient;
 };
 
-module.exports = getClient;
+const getRedisClient = async () => {
+  try {
+    if (!redisClient || !redisClient.isOpen) {
+      return await createRedisClient();
+    }
+    return redisClient;
+  } catch (error) {
+    Logger.log('error', 'Error getting Redis client:', error);
+    return null;
+  }
+};
+
+module.exports = getRedisClient;

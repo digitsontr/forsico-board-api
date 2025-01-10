@@ -7,129 +7,71 @@ const mongoose = require("mongoose");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const userService = require("../services/user");
 const taskStatusService = require("../services/taskStatus");
-const ExceptionLogger = require("../scripts/logger/exception");
 const Logger = require("../scripts/logger/board");
 const listService = require("./list");
 const taskService = require("./task");
 const { v4: uuidv4 } = require("uuid");
-const { populate } = require("../models/task");
-const { CacheService, CACHE_TTL } = require('./cache');
+const { withBaseQuery, withTenantQuery, excludeSoftDeleteFields } = require("../scripts/helpers/queryHelper");
 
 const getBoardMembers = async (boardId) => {
   try {
-    const board = await Board.findById(boardId).populate(
-      "members",
-      "firstName lastName id profilePicture email"
-    );
+    if (!mongoose.Types.ObjectId.isValid(boardId)) {
+      return ApiResponse.fail([new ErrorDetail("Invalid board ID format")]);
+    }
+
+    const board = await Board.findOne(
+      withBaseQuery({ _id: boardId })
+    ).populate("members", "firstName lastName id profilePicture email");
 
     if (!board) {
+      Logger.error(`Board not found: ${boardId}`);
       return ApiResponse.fail([new ErrorDetail("Board not found")]);
     }
 
     return ApiResponse.success(board.members);
   } catch (e) {
-    Logger.error(e);
-    return ApiResponse.fail([
-      new ErrorDetail("Failed to retrieve board members"),
-    ]);
+    Logger.error(`Error in getBoardMembers: ${e.message}`, e);
+    return ApiResponse.fail([new ErrorDetail("Failed to retrieve board members")]);
   }
 };
 
 const getBoardsOfWorkspace = async (workspaceId) => {
+  const session = await mongoose.startSession();
   try {
+    session.startTransaction();
+
+    if (!mongoose.Types.ObjectId.isValid(workspaceId)) {
+      return ApiResponse.fail([new ErrorDetail("Invalid workspace ID format")]);
+    }
+
     const boards = await Board.find(
-      { workspaceId: workspaceId, isDeleted: false },
-      "-isDeleted -deletionId -deletedAt"
-    ).populate("members", "firstName lastname id profilePicture");
+      withTenantQuery({ }, workspaceId),
+      excludeSoftDeleteFields()
+    )
+    .populate("members", "firstName lastname id profilePicture")
+    .session(session)
+    .lean();
+    
+    await session.commitTransaction();
     return ApiResponse.success(boards);
   } catch (e) {
-    Logger.error(e);
+    await session.abortTransaction();
+    Logger.error(`Error in getBoardsOfWorkspace: ${e.message}`, e);
     return ApiResponse.fail([new ErrorDetail("Failed to retrieve boards")]);
+  } finally {
+    session.endSession();
   }
 };
 
-const getBoardById = async (id, workspaceId) => {
-  try {
-    const cacheKey = CacheService.generateKey(workspaceId, 'board', id);
-    
-    // Try to get from cache
-    const cachedBoard = await CacheService.get(cacheKey);
-    if (cachedBoard) {
-      return ApiResponse.success(cachedBoard);
-    }
-
-    const board = await Board.findById(id, "name description workspaceId")
-      .populate([
-        {
-          path: "lists",
-          match: { isDeleted: false },
-          select: "name tasks color order",
-          options: { 
-            sort: { order: 1 },
-            lean: true 
-          },
-          populate: {
-            path: "tasks",
-            match: { isDeleted: false },
-            select: "name boardId assignee dueDate priority subtasks statusId parentTask createdAt",
-            options: {
-              sort: {
-                // First by priority (higher number = higher priority)
-                priority: -1,
-                // Then by due date (closer = higher priority)
-                dueDate: 1,
-                // Finally by creation date
-                createdAt: 1
-              }
-            },
-            populate: {
-              path: "members",
-              select: "id _id firstName lastName profilePicture",
-            },
-          }
-        },
-        {
-          path: "members",
-          select: "_id firstName lastName profilePicture id",
-          options: { lean: true }
-        }
-      ])
-      .lean();
-
-    if (!board) {
-      Logger.error(`Board not found: boardId=${id}`);
-      return ApiResponse.fail([new ErrorDetail("Board not found")]);
-    }
-
-    // Add urgency level to tasks
-    if (board.lists) {
-      board.lists.forEach(list => {
-        if (list.tasks) {
-          list.tasks = list.tasks.map(task => ({
-            ...task,
-            urgencyLevel: calculateUrgencyLevel(task)
-          }));
-        }
-      });
-    }
-
-    // Cache the board data
-    await CacheService.set(cacheKey, board, CACHE_TTL.BOARD);
-
-    return ApiResponse.success(board);
-  } catch (e) {
-    Logger.error(e);
-    return ApiResponse.fail([new ErrorDetail("Failed to retrieve board")]);
-  }
-};
-
-// Helper function to calculate task urgency
-const calculateUrgencyLevel = (task) => {
+// Helper function to get urgency score (for sorting)
+const getUrgencyScore = (task) => {
   let urgencyScore = 0;
   const now = new Date();
 
-  // Priority based score (0-5) * 20 = max 100 points
-  urgencyScore += (task.priority || 0) * 20;
+  // Priority based score (0 is highest, 5 is lowest)
+  // Convert 0->200, 1->160, 2->120, 3->80, 4->40, 5->0
+  const priority = parseInt(task.priority) || 0;
+  urgencyScore += (5 - priority) * 40; // Increase priority weight
 
   // Due date based score
   if (task.dueDate) {
@@ -137,153 +79,287 @@ const calculateUrgencyLevel = (task) => {
     const daysUntilDue = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
 
     if (daysUntilDue < 0) {
-      // Overdue tasks get maximum urgency
-      urgencyScore += 100;
+      urgencyScore += 200; // Overdue
     } else if (daysUntilDue === 0) {
-      // Due today
-      urgencyScore += 90;
+      urgencyScore += 180; // Due today
     } else if (daysUntilDue <= 2) {
-      // Due in next 2 days
-      urgencyScore += 80;
+      urgencyScore += 160; // Due in 2 days
     } else if (daysUntilDue <= 7) {
-      // Due in next week
-      urgencyScore += 60;
+      urgencyScore += 120; // Due in a week
     } else if (daysUntilDue <= 14) {
-      // Due in next 2 weeks
-      urgencyScore += 40;
+      urgencyScore += 80; // Due in 2 weeks
     } else {
-      // Due in more than 2 weeks
-      urgencyScore += 20;
+      urgencyScore += 40; // Due later
     }
   }
 
-  // Convert score to level
-  if (urgencyScore >= 150) return 'CRITICAL';
-  if (urgencyScore >= 120) return 'HIGH';
-  if (urgencyScore >= 80) return 'MEDIUM';
-  if (urgencyScore >= 40) return 'LOW';
-  return 'NORMAL';
+  return urgencyScore;
+};
+
+const calculateUrgencyLevel = (task) => {
+  const urgencyScore = getUrgencyScore(task);
+
+  // Adjust thresholds
+  if (urgencyScore >= 300) return 'CRITICAL'; // High priority + overdue/due soon
+  if (urgencyScore >= 200) return 'HIGH';     // Either high priority or overdue
+  if (urgencyScore >= 150) return 'MEDIUM';   // Medium priority or due soon
+  if (urgencyScore >= 100) return 'LOW';      // Lower priority or due later
+  return 'NORMAL';                            // No priority or due date
+};
+
+const getBoardById = async (id, workspaceId) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return ApiResponse.fail([new ErrorDetail("Invalid board ID format")]);
+    }
+
+    const board = await Board.findOne(
+      withTenantQuery({ _id: id }, workspaceId)
+    ).populate([
+      {
+        path: "lists",
+        match: { isDeleted: false },
+        select: "name tasks color order",
+        options: { 
+          sort: { order: 1 },
+          lean: true 
+        },
+        populate: {
+          path: "tasks",
+          match: { isDeleted: false },
+          select: "_id name boardId assignee dueDate priority subtasks statusId parentTask createdAt members listId",
+          options: {
+            lean: true
+          },
+          populate: [
+            {
+              path: "members",
+              match: { isDeleted: false },
+              select: "id _id firstName lastName profilePicture",
+            },
+            {
+              path: "assignee",
+              select: "id _id firstName lastName profilePicture"
+            }
+          ]
+        }
+      },
+      {
+        path: "members",
+        match: { isDeleted: false },
+        select: "_id firstName lastName profilePicture id",
+        options: { lean: true }
+      }
+    ])
+    .lean();
+
+    if (!board) {
+      Logger.error(`Board not found: boardId=${id}`);
+      return ApiResponse.fail([new ErrorDetail("Board not found")]);
+    }
+
+    // Process and sort tasks by urgency
+    if (board.lists) {
+      board.lists.forEach(list => {
+        if (list.tasks) {
+          // Map tasks with urgency data
+          list.tasks = list.tasks.map(task => {
+            const score = getUrgencyScore(task);
+            return {
+              ...task,
+              priority: parseInt(task.priority) || 0,
+              urgencyScore: score,
+              urgencyLevel: calculateUrgencyLevel({
+                ...task,
+                urgencyScore: score
+              })
+            };
+          });
+
+          // Sort tasks by urgency score (descending)
+          list.tasks.sort((a, b) => {
+            // Sort by urgency score (higher first)
+            const scoreDiff = b.urgencyScore - a.urgencyScore;
+            if (scoreDiff !== 0) return scoreDiff;
+
+            // If same urgency score, sort by priority (0 is highest)
+            const priorityA = parseInt(a.priority) || 0;
+            const priorityB = parseInt(b.priority) || 0;
+            if (priorityA !== priorityB) return priorityA - priorityB;
+
+            // If same priority, sort by due date (earlier first)
+            if (a.dueDate && b.dueDate) {
+              return new Date(a.dueDate) - new Date(b.dueDate);
+            }
+            // Tasks with due dates come before tasks without
+            if (a.dueDate) return -1;
+            if (b.dueDate) return 1;
+
+            // Finally sort by creation date (newer first)
+            return new Date(b.createdAt) - new Date(a.createdAt);
+          });
+        }
+      });
+    }
+
+    return ApiResponse.success(board);
+  } catch (e) {
+    Logger.error(`Error in getBoardById: ${e.message}`, e);
+    return ApiResponse.fail([new ErrorDetail("Failed to retrieve board")]);
+  }
 };
 
 const createBoard = async (workspaceId, userId, boardData) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
-    const [workspace, user] = await Promise.all([
-      Workspace.findById(workspaceId, "_id boards"),
-      User.findOne({ id: userId }, "_id"),
-    ]);
+    session.startTransaction();
 
-    if (!workspace) {
-      Logger.error(`Workspace not found workspaceId=${workspaceId}`);
-      throw new Error("Workspace not found");
+    // Validate IDs
+    if (!mongoose.Types.ObjectId.isValid(workspaceId)) {
+      return ApiResponse.fail([new ErrorDetail("Invalid workspace ID format")]);
     }
 
-    const boardModel = new Board({
+    const user = await User.findOne({ id: userId }).session(session);
+    if (!user) {
+      return ApiResponse.fail([new ErrorDetail("User not found")]);
+    }
+
+    const workspace = await Workspace.findById(workspaceId).session(session);
+    if (!workspace) {
+      return ApiResponse.fail([new ErrorDetail("Workspace not found")]);
+    }
+
+    const board = new Board({
       name: boardData.name,
-      description: boardData.description || "",
+      description: boardData.description,
       workspaceId: workspaceId,
+      members: [user._id],
+      creator: userId
     });
 
-    const savedBoard = await boardModel.save({ session });
-    const defaultItems = [
-      { name: "Backlog", color: "#ED1E5A", order: 1 },
-      { name: "In Progress", color: "#36C5F0", order: 2 },
-      { name: "Done", color: "#A1F679", order: 3 },
+    const savedBoard = await board.save({ session });
+
+    // Create default task statuses
+    await taskStatusService.createDefaultTaskStatuses(
+      savedBoard._id,
+      workspaceId,
+      user._id
+    );
+
+    // Create default lists
+    const defaultLists = [
+      { name: "Backlog", color: "#ed1e59", order: 1 },
+      { name: "In Progress", color: "#36c5f0", order: 2 },
+      { name: "Done", color: "#a1f679", order: 3 }
     ];
 
-    const createdLists = [];
-    const createdStatuses = [];
-
-    for (const item of defaultItems) {
+    for (const listData of defaultLists) {
       const list = new List({
-        name: item.name,
+        name: listData.name,
+        color: listData.color,
         boardId: savedBoard._id,
-        workspaceId,
-        color: item.color,
-        order: item.order,
+        workspaceId: workspaceId,
+        order: listData.order
       });
-      const savedList = await list.save({ session });
-      createdLists.push(savedList);
 
-      const taskStatus = new TaskStatus({
-        name: item.name,
-        color: item.color,
-        boardId: savedBoard._id,
-        workspaceId,
-        createdBy: user._id,
-        listId: savedList._id,
-      });
-      const savedStatus = await taskStatus.save({ session });
-      createdStatuses.push(savedStatus);
+      const savedList = await list.save({ session });
+      savedBoard.lists.push(savedList._id);
     }
 
-    savedBoard.lists = createdLists.map((list) => list._id);
-    savedBoard.members.push(user._id);
     await savedBoard.save({ session });
-
     workspace.boards.push(savedBoard._id);
     await workspace.save({ session });
 
     await session.commitTransaction();
-    session.endSession();
-
     return ApiResponse.success(savedBoard);
   } catch (e) {
     await session.abortTransaction();
-    session.endSession();
-
-    Logger.error("Error creating board:", e);
+    Logger.error(`Error in createBoard: ${e.message}`, e);
     return ApiResponse.fail([new ErrorDetail("Failed to create board")]);
+  } finally {
+    session.endSession();
   }
 };
 
 const updateBoard = async (id, updateData) => {
+  const session = await mongoose.startSession();
   try {
-    const updatedBoard = await Board.findByIdAndUpdate(id, updateData, {
-      new: true,
-    });
+    session.startTransaction();
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return ApiResponse.fail([new ErrorDetail("Invalid board ID format")]);
+    }
+
+    const updatedBoard = await Board.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, session }
+    );
 
     if (!updatedBoard) {
       return ApiResponse.fail([new ErrorDetail("Board not found or update failed")]);
     }
 
-    // Invalidate board cache
-    const cacheKey = CacheService.generateKey(updatedBoard.workspaceId, 'board', id);
-    await CacheService.del(cacheKey);
-
+    await session.commitTransaction();
     return ApiResponse.success(updatedBoard);
   } catch (e) {
+    await session.abortTransaction();
+    Logger.error(`Error in updateBoard: ${e.message}`, e);
     return ApiResponse.fail([new ErrorDetail("Failed to update board")]);
+  } finally {
+    session.endSession();
   }
 };
 
 const deleteBoard = async (boardId, deletionId) => {
+  const session = await mongoose.startSession();
   try {
+    session.startTransaction();
+
+    if (!mongoose.Types.ObjectId.isValid(boardId)) {
+      return ApiResponse.fail([new ErrorDetail("Invalid board ID format")]);
+    }
+
     deletionId = deletionId || uuidv4();
 
-    const deletedBoard = await Board.findByIdAndUpdate(boardId, {
-      isDeleted: true,
-      deletedAt: new Date(),
-      deletionId: deletionId,
-    });
+    const board = await Board.findById(boardId).session(session);
+    if (!board) {
+      return ApiResponse.fail([new ErrorDetail("Board not found")]);
+    }
 
-    Logger.log("info", `BOARD ${boardId} REMOVED DELETION ID: ${deletionId}`);
+    const deletedBoard = await Board.findByIdAndUpdate(
+      boardId,
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletionId: deletionId,
+      },
+      { session }
+    );
 
-    await listService.deleteListsByBoard(boardId, deletionId);
-    await taskService.deleteTaskByBoard(boardId, deletionId);
-    await taskStatusService.deleteTaskStatusesByBoard(boardId, deletionId);
+    // Delete related entities
+    await Promise.all([
+      listService.deleteListsByBoard(boardId, deletionId),
+      taskService.deleteTaskByBoard(boardId, deletionId),
+      taskStatusService.deleteTaskStatusesByBoard(boardId, deletionId)
+    ]);
 
+    await session.commitTransaction();
+
+    Logger.info(`Board ${boardId} removed with deletion ID: ${deletionId}`);
     return ApiResponse.success(deletedBoard);
   } catch (e) {
+    await session.abortTransaction();
+    Logger.error(`Error in deleteBoard: ${e.message}`, e);
     return ApiResponse.fail([new ErrorDetail("Failed to delete board")]);
+  } finally {
+    session.endSession();
   }
 };
 
 const addMemberToBoard = async (boardId, userData) => {
   try {
-    const board = await Board.findById(boardId);
+    const board = await Board.findOne(withBaseQuery({ _id: boardId }));
 
     if (!board) {
       return ApiResponse.fail([new ErrorDetail("Board not found")]);

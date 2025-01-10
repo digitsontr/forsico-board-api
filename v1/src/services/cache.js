@@ -17,7 +17,7 @@ class CacheService {
     }
   }
 
-  static async set(key, data, ttl = 300) {
+  static async set(key, data, ttl = 60) {
     try {
       const redis = await getRedisClient();
       await redis.set(key, JSON.stringify(data), {
@@ -65,11 +65,11 @@ class CacheService {
 }
 
 const CACHE_TTL = {
-  WORKSPACE: 3600,    // 1 hour
-  BOARD: 900,        // 15 minutes
-  TASK_LIST: 300,    // 5 minutes
-  USER: 1800,        // 30 minutes
-  PERMISSIONS: 1800  // 30 minutes
+  WORKSPACE: 30,    
+  BOARD: 30,       
+  TASK_LIST: 30,   
+  USER: 300,     
+  PERMISSIONS: 300 
 };
 
 module.exports = {
