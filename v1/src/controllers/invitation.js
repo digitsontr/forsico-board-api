@@ -19,7 +19,8 @@ const declineInvitation = async (req, res) => {
 
 const getInvitationsForUser = async (req, res) => {
     const email = req.user.email;
-    const response = await service.getInvitationsForUser(email);
+    const id = req.user.sub;
+    const response = await service.getInvitationsForUser(email, id);
 
     res.status(response.status ? httpStatus.OK : httpStatus.BAD_REQUEST).send(response);
 };
