@@ -13,7 +13,7 @@ const getAllWorkspaces = async (req, res) => {
 };
 
 const getWorkspacesOfUser = async (req, res) => {
-  const response = await service.getWorkspacesOfUser(req.user);
+  const response = await service.getWorkspacesOfUser(req.user, req.subscriptionId);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -35,7 +35,7 @@ const getWorkspaceById = async (req, res) => {
 };
 
 const createWorkspace = async (req, res) => {
-  const response = await service.createWorkspace(req.body, req.user, req.accessToken);
+  const response = await service.createWorkspace(req.body, req.user, req.accessToken, req.subscriptionId);
 
   if (response.status) {
     res.status(httpStatus.CREATED).send(response);
@@ -93,6 +93,45 @@ const deleteWorkspace = async (req, res) => {
   res.status(httpStatus.BAD_REQUEST).send(response);
 };
 
+const updateWorkspaceReadyStatus = async (req, res) => {
+  const response = await service.updateWorkspaceReadyStatus(
+    req.workspaceId,
+    req.body.isReady
+  );
+
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
+    return;
+  }
+
+  res.status(httpStatus.BAD_REQUEST).send(response);
+};
+
+const updateWorkspaceProgress = async (req, res) => {
+  const response = await service.updateWorkspaceProgress(
+    req.workspaceId,
+    req.body.state
+  );
+
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
+    return;
+  }
+
+  res.status(httpStatus.BAD_REQUEST).send(response);
+};
+
+const getWorkspaceProgress = async (req, res) => {
+  const response = await service.getWorkspaceProgress(req.workspaceId);
+
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
+    return;
+  }
+
+  res.status(httpStatus.BAD_REQUEST).send(response);
+};
+
 module.exports = {
   getAllWorkspaces,
   getWorkspaceById,
@@ -101,5 +140,8 @@ module.exports = {
   updateWorkspace,
   deleteWorkspace,
   addMemberToWorkspace,
-  removeMemberFromWorkspace
+  removeMemberFromWorkspace,
+  updateWorkspaceReadyStatus,
+  updateWorkspaceProgress,
+  getWorkspaceProgress
 };

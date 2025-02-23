@@ -1,4 +1,4 @@
-const Workspace = require("../models/workspace");
+const { Workspace } = require("../models/workspace");
 const Board = require("../models/board");
 const List = require("../models/list");
 const Task = require("../models/task");

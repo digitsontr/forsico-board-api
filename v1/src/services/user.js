@@ -63,22 +63,27 @@ const fetchUserPermissons = async (userId, workspaceId, accessToken) => {
 
 const userRegistered = async (userInfo) => {
   try {
-    const existingUser = await User.findOne({ id: userInfo.Id });
+    Logger.log('info', 'Attempting to register user:', userInfo);
+
+    const existingUser = await User.findOne({ id: userInfo.id });
 
     if (existingUser) {
-      return ApiResponse.success({ message: "User already exists in MongoDB" });
+      Logger.log('info', `User already exists: ${userInfo.id}`);
+      return ApiResponse.success({ message: "User already exists in MongoDB", user: existingUser });
     }
 
     const newUser = new User({
-      id: userInfo.Id,
-      firstName: userInfo.FirstName,
-      lastName: userInfo.LastName,
-      profilePicture: userInfo.ProfilePictureUrls || "default.jpg",
+      id: userInfo.id,
+      firstName: userInfo.firstName,
+      lastName: userInfo.lastName,
+      profilePicture: userInfo.profilePicture,
       workspaces: [], 
     });
 
-    await newUser.save();
-    return ApiResponse.success(newUser);
+    const savedUser = await newUser.save();
+    Logger.log('info', `New user registered successfully: ${userInfo.id}`, savedUser);
+    
+    return ApiResponse.success(savedUser);
   } catch (error) {
     Logger.error("Error registering user:", error);
     return ApiResponse.fail([new ErrorDetail(error.message)]);

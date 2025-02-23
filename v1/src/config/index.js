@@ -1,9 +1,9 @@
 const server = require('./server');
-const redisClient = require('./redisClient');
+const getRedisClient = require('./redisClient');
 
 module.exports = async () => {
     try {
-        await redisClient.connect();
+        await getRedisClient();
         server();
     } catch (error) {
         console.error('Error starting the server or connecting to Redis:', error);
