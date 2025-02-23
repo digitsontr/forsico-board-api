@@ -135,7 +135,7 @@ const removeMemberFromTask = async (req, res) => {
 };
 
 const getUserTasks = async (req, res) => {
-  const response = await service.getUserTasks(req.user.sub);
+  const response = await service.getUserTasks(req.user.sub, req.subscriptionId);
 
   if (response.status) {
     res.status(httpStatus.CREATED).send(response);

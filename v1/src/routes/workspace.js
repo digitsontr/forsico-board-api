@@ -11,7 +11,10 @@ const {
   updateWorkspace,
   deleteWorkspace,
   addMemberToWorkspace,
-  removeMemberFromWorkspace
+  removeMemberFromWorkspace,
+  updateWorkspaceReadyStatus,
+  updateWorkspaceProgress,
+  getWorkspaceProgress
 } = require("../controllers/workspace");
 const verifyWorkspace = require("../middlewares/verifyWorkspace");
 
@@ -50,5 +53,29 @@ router.put(
 );
 
 router.delete("/", verifyWorkspace(), authorize(), deleteWorkspace);
+
+router.patch(
+  "/ready-status",
+  verifyWorkspace(),
+  validate(validations.updateReadyStatusValidation),
+  authorize(),
+  updateWorkspaceReadyStatus
+);
+
+router.patch(
+  "/progress",
+  verifyWorkspace(),
+  validate(validations.updateProgressValidation),
+  authorize(),
+  updateWorkspaceProgress
+);
+
+router.get(
+  "/progress",
+  verifyWorkspace(),
+  validate(validations.getProgressValidation),
+  authorize(),
+  getWorkspaceProgress
+);
 
 module.exports = router;

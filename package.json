@@ -5,13 +5,15 @@
   "main": "index.js",
   "scripts": {
     "start": "node v1/src/app.js",
-    "dev": "PORT=3005 nodemon v1/src/app.js"
+    "dev": "PORT=3005 nodemon v1/src/app.js",
+    "migrate:subscriptions": "node v1/src/scripts/migrations/addSubscriptionToWorkspaces.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@azure/identity": "^4.4.1",
     "@azure/keyvault-secrets": "^4.8.0",
+    "@azure/service-bus": "^7.9.5",
     "@azure/storage-blob": "^12.25.0",
     "axios": "^1.7.7",
     "cors": "^2.8.5",

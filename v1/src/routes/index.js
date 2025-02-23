@@ -9,3 +9,4 @@ module.exports.NotificationRoutes = require("./notification");
 module.exports.PutBackRoutes = require("./putBack");
 module.exports.WebHookRoutes = require("./webhook");
 module.exports.InvitationRoutes = require("./invitation");
+module.exports.SubscriptionRoutes = require("./subscription");

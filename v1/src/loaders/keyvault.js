@@ -12,6 +12,12 @@ const getSecretValue = async (secretName) =>{
       });
 }
 
+// Service Bus için yeni bir fonksiyon
+const getServiceBusConnectionString = async () => {
+    return getSecretValue('ServiceBus-ConnectionString');
+};
+
 module.exports = {
-    getSecretValue
+    getSecretValue,
+    getServiceBusConnectionString
 };

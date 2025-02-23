@@ -3,7 +3,7 @@ const redis = require("../config/redisClient");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const { htmlToText } = require("html-to-text");
 const User = require("../models/user");
-const Workspace = require("../models/workspace");
+const { Workspace } = require("../models/workspace");
 
 const logAndPublishNotification = async (model, action, data) => {
   try {
