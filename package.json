@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node v1/src/app.js",
     "dev": "PORT=3005 nodemon v1/src/app.js",
-    "migrate:subscriptions": "node v1/src/scripts/migrations/addSubscriptionToWorkspaces.js"
+    "migrate:subscriptions": "node v1/src/scripts/migrations/addSubscriptionToWorkspaces.js",
+    "migrate:users": "node v1/src/scripts/migrations/migrateUsersToUserProfiles.js"
   },
   "author": "",
   "license": "ISC",

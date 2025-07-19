@@ -45,7 +45,6 @@ app.listen(PORT, () => {
 	app.use("/checklist", ChecklistRoutes);
 	app.use("/notification", NotificationRoutes);
 	app.use("/putback", PutBackRoutes);
-	app.use("/webhook", WebHookRoutes);
 	app.use("/invitation", InvitationRoutes);
   app.use("/subscription", SubscriptionRoutes);
 	

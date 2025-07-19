@@ -7,7 +7,6 @@ const Invitation = require("../models/invitation");
 const mongoose = require("mongoose");
 const User = require("../models/user");
 const emailService = require("../services/email");
-const getRedisClient = require("../config/redisClient");
 
 const checkIsUserSubscriptionValid = async (subscriptionId, accessToken) => {
   try {
@@ -21,11 +20,13 @@ const checkIsUserSubscriptionValid = async (subscriptionId, accessToken) => {
 	  }
 	);
 
+    console.log("SUBSTATUS:: ", response.data.subscription_request.status)
+
 	const result = {
-	  isValid: response.data.status === "approved",
+	  isValid: response.data.subscription_request.status === "approved",
 	  limits: {
-		workspaceLimit: response.data.workspace_limit || 1,
-		userLimit: response.data.user_count || 15,
+		workspaceLimit: response.data.subscription_type.workspace_limit || 1,
+		userLimit: response.data.subscription_type.user_limit || 3,
 	  },
 	};
 	
