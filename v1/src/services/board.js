@@ -134,7 +134,6 @@ const getBoardById = async (id, workspaceId) => {
           populate: [
             {
               path: "members",
-              match: { isDeleted: false },
               select: "id _id firstName lastName profilePicture",
             },
             {
@@ -146,9 +145,7 @@ const getBoardById = async (id, workspaceId) => {
       },
       {
         path: "members",
-        match: { isDeleted: false },
         select: "_id firstName lastName profilePicture id",
-        options: { lean: true }
       }
     ])
     .lean();

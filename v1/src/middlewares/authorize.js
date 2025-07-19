@@ -118,24 +118,6 @@ const authorize = (permission) => async (req, res, next) => {
       }
     }
 
-    if (permission) {
-      const permissions = await userService.fetchUserPermissons(
-        req.user.sub,
-        workspaceId || "system",
-        req.accessToken
-      );
-
-      if (
-        !permissions.includes(
-          "RoleManager_Workspace_" + (workspaceId || "system")
-        ) &&
-        !permissions.filter((perm) => perm.includes(permission)).length > 0
-      ) {
-        return res
-          .status(FORBIDDEN)
-          .json(ApiResponse.fail([new ErrorDetail("User has not authorized")]));
-      }
-    }
 
     req.subscriptionId = subscriptionId;
     return next();
