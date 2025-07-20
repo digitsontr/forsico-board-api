@@ -30,22 +30,26 @@ app.use(express.json({ limit: "10mb" }));
 app.use(helmet());
 app.use(authenticate);
 
+// Health check endpoint for Kubernetes probes
+app.get('/health', (req, res) => {
+  res.json({ message: 'OK' });
+});
 
 const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, () => {
-	console.info(`Server works ON ${PORT}`);
+// Register routes
+app.use("/workspace", WorkspaceRoutes);
+app.use("/board", BoardRoutes);
+app.use("/list", ListRoutes);
+app.use("/task", TaskRoutes);
+app.use("/taskStatus", TaskStatusRoutes);
+app.use("/comment", CommentRoutes);
+app.use("/checklist", ChecklistRoutes);
+app.use("/notification", NotificationRoutes);
+app.use("/putback", PutBackRoutes);
+app.use("/invitation", InvitationRoutes);
+app.use("/subscription", SubscriptionRoutes);
 
-	app.use("/workspace", WorkspaceRoutes);
-	app.use("/board", BoardRoutes);
-	app.use("/list", ListRoutes);
-	app.use("/task", TaskRoutes);
-	app.use("/taskStatus", TaskStatusRoutes);
-	app.use("/comment", CommentRoutes);
-	app.use("/checklist", ChecklistRoutes);
-	app.use("/notification", NotificationRoutes);
-	app.use("/putback", PutBackRoutes);
-	app.use("/invitation", InvitationRoutes);
-  app.use("/subscription", SubscriptionRoutes);
-	
+app.listen(PORT, () => {
+    console.info(`Server works ON ${PORT}`);
 });
