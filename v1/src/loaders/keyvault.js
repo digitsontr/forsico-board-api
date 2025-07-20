@@ -14,7 +14,7 @@ const getSecretValue = async (secretName) =>{
 
 // Service Bus için yeni bir fonksiyon
 const getServiceBusConnectionString = async () => {
-    return getSecretValue('ServiceBus-ConnectionString');
+    return getSecretValue('AuthApi-ServiceBusConnection');
 };
 
 module.exports = {
