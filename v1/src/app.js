@@ -28,12 +28,15 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(helmet());
-app.use(authenticate);
 
 // Health check endpoint for Kubernetes probes
+
 app.get('/health', (req, res) => {
-  res.json({ message: 'OK' });
-});
+	res.json({ message: 'OK' });
+  });
+
+app.use(authenticate);
+
 
 const PORT = process.env.PORT || 8080;
 
