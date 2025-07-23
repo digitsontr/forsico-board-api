@@ -1,52 +1,54 @@
-const axios = require("axios");
 const Logger = require("../scripts/logger/board");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
-const getRedisClient = require("../config/redisClient");
+const User = require("../models/user");
+const userProfileServiceClient = require("./userProfileServiceClient");
 
-const USER_PROFILE_API_URL = process.env.USER_PROFILE_API_URL;
-const USER_PROFILE_API_KEY = process.env.USER_PROFILE_API_KEY;
-
-const getUserById = async (userId) => {
+const getUserById = async (userId, token) => {
   try {
-    const cacheKey = `user_${userId}`;
-    const redisClient = await getRedisClient();
-
-    if (redisClient) {
-      const cachedUser = await redisClient.get(cacheKey);
-      if (cachedUser) {
-        return JSON.parse(cachedUser);
-      }
+    const userResponse = await userProfileServiceClient.getProfileByAuthId(
+      token,
+      userId
+    );
+    if (!userResponse.success) {
+      return userResponse;
     }
-
-    const response = await axios.get(`${USER_PROFILE_API_URL}/api/users/${userId}`, {
-      headers: {
-        'x-api-key': USER_PROFILE_API_KEY
-      }
-    });
-
-    const user = response.data.data;
-
-    if (redisClient && user) {
-      await redisClient.set(cacheKey, JSON.stringify(user), {
-        EX: 300
-      });
-    }
-
-    return new ApiResponse({
-      data: user,
-      status: true,
-      errors: []
-    });
+    return ApiResponse.success(userResponse.data);
   } catch (error) {
     Logger.error("Error fetching user by ID:", error);
     return new ApiResponse({
       data: null,
       status: false,
-      errors: [error.message]
+      errors: [error.message],
     });
   }
 };
 
+const userRegistered = async (messageBody) => {
+  try {
+    const { Id, FirstName, LastName, ProfilePictureUrl } = messageBody;
+
+    const existingUser = await User.findOne({ id: Id });
+
+    if (existingUser) {
+      Logger.info(`User already exists: ${Id}`);
+      return;
+    }
+
+    const newUser = new User({
+      id: Id,
+      firstName: FirstName,
+      lastName: LastName,
+      profilePicture: ProfilePictureUrl,
+    });
+
+    await newUser.save();
+    Logger.info(`User created: ${Id}`);
+  } catch (error) {
+    Logger.error("Error in userRegistered service:", error);
+  }
+};
+
 module.exports = {
-  getUserById
+  getUserById,
+  userRegistered,
 };

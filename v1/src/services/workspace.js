@@ -1,12 +1,10 @@
 const { Workspace, WorkspaceProgressState } = require("../models/workspace");
 const User = require("../models/user");
-const axios = require("axios");
-const mongoose = require("mongoose");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
-const ExceptionLogger = require("../scripts/logger/exception");
 const Logger = require("../scripts/logger/workspace");
 const boardService = require("./board");
 const { v4: uuidv4 } = require("uuid");
+const workspaceServiceClient = require("./workspaceServiceClient");
 
 const getAllWorkspaces = async () => {
   try {
@@ -16,40 +14,35 @@ const getAllWorkspaces = async () => {
     return ApiResponse.fail([new ErrorDetail("Failed to retrieve workspaces")]);
   }
 };
-const getWorkspacesOfUserCacheKey = (userId) => `workspaces:user:${userId}`;
 
-const getWorkspacesOfUser = async (user, subscriptionId) => {
+const getWorkspacesOfUser = async (user, subscriptionId, token) => {
   try {
-    const userEntity = await User.findOne({ id: user.sub });
+    const workspaceResponse = await workspaceServiceClient.getWorkspaces(
+      token,
+      subscriptionId
+    );
 
-    if (userEntity === null) {
-      return ApiResponse.fail([new ErrorDetail("There is no user!")]);
+    if (!workspaceResponse.success) {
+      return workspaceResponse;
     }
 
-    const workspaces = await Workspace.find(
-      {
-        members: userEntity._id,
-        isDeleted: false,
-        subscriptionId: subscriptionId
-      },
-      "name description owner members progress"
-    ).populate({
-      path: "boards",
-      match: { members: userEntity._id, isDeleted: false },
-      select: "id name members",
-      options: { sort: { createdAt: 1 } },
-      populate: [
-        {
-          path: "members",
-          select: "id firstName lastName profilePicture",
-        },
-        {
-          path: "lists",
-          select: "_id name",
-          options: { sort: { createdAt: 1 } },
-        },
-      ],
-    });
+    const userEntity = await User.findOne({ id: user.sub });
+    if (!userEntity) {
+      return ApiResponse.fail([new ErrorDetail("User not found in board-api database")]);
+    }
+
+    const workspaces = await Promise.all(
+      workspaceResponse.data.workspaces.map(async (workspace) => {
+        const boards = await boardService.getBoardsByWorkspaceId(
+          workspace._id,
+          userEntity._id
+        );
+        return {
+          ...workspace,
+          boards: boards.data,
+        };
+      })
+    );
 
     return ApiResponse.success(workspaces);
   } catch (e) {
@@ -58,17 +51,22 @@ const getWorkspacesOfUser = async (user, subscriptionId) => {
   }
 };
 
-const getWorkspaceById = async (id) => {
+const getWorkspaceById = async (id, token) => {
   try {
-    const workspace = await Workspace.findById(id)
-      .populate("members", "id firstName lastName profilePicture")
-      .populate("owner", "id firstName lastName profilePicture")
-      .populate("boards", "_id name description")
-      .select("+progress");
+    const workspaceResponse = await workspaceServiceClient.getWorkspaceById(
+      token,
+      id
+    );
 
-    if (!workspace) {
-      return ApiResponse.fail([new ErrorDetail("Workspace not found")]);
+    if (!workspaceResponse.success) {
+      return workspaceResponse;
     }
+
+    const boards = await boardService.getBoardsByWorkspaceId(id);
+    const workspace = {
+      ...workspaceResponse.data,
+      boards: boards.data,
+    };
 
     return ApiResponse.success(workspace);
   } catch (e) {
@@ -77,37 +75,22 @@ const getWorkspaceById = async (id) => {
 };
 
 const createWorkspace = async (workspaceData, user, accessToken, subscriptionId) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  let savedWorkspace;
-
   try {
-    const userEntity = await User.findOne({ id: user.sub });
+    const workspaceResponse = await workspaceServiceClient.createWorkspace(
+      accessToken,
+      workspaceData,
+      subscriptionId
+    );
 
-    const workspace = new Workspace({
-      name: workspaceData.name,
-      description: workspaceData.description,
-      members: [userEntity._id],
-      owner: [userEntity._id],
-      subscriptionId: subscriptionId,
-      isReady: false,
-      progress: {
-        state: WorkspaceProgressState.INITIAL,
-        lastUpdated: new Date(),
-        history: [{
-          state: WorkspaceProgressState.INITIAL,
-          timestamp: new Date()
-        }]
-      }
-    });
+    if (!workspaceResponse.success) {
+      return workspaceResponse;
+    }
 
-    savedWorkspace = await workspace.save({ session });
+    const savedWorkspace = workspaceResponse.data;
 
-    let existingUser = await User.findOne({ id: user.sub }).session(session);
+    let userToSave = await User.findOne({ id: user.sub });
 
-    let userToSave;
-    if (!existingUser) {
+    if (!userToSave) {
       userToSave = new User({
         id: user.sub,
         firstName: user.name,
@@ -116,58 +99,36 @@ const createWorkspace = async (workspaceData, user, accessToken, subscriptionId)
         workspaces: [savedWorkspace._id],
       });
     } else {
-      existingUser.workspaces.push(savedWorkspace._id);
-      userToSave = existingUser;
+      userToSave.workspaces.push(savedWorkspace._id);
     }
 
-    await userToSave.save({ session });
+    await userToSave.save();
 
-    savedWorkspace.members.push(userToSave._id);
-    savedWorkspace.owner = userToSave._id;
+    await boardService.createBoard(savedWorkspace._id, user.sub, {
+      name: "General",
+    });
 
-    await savedWorkspace.save({ session });
-    await saveWorkspaceToAuthApi(
-      savedWorkspace._id,
-      savedWorkspace.name,
-      accessToken
-    );
-
-    await session.commitTransaction();
-    session.endSession();
+    return ApiResponse.success(savedWorkspace);
   } catch (e) {
-    await session.abortTransaction();
     console.error(e);
     return ApiResponse.fail([new ErrorDetail("Failed to create workspace")]);
-  } finally {
-    session.endSession();
   }
-
-  await boardService.createBoard(savedWorkspace._id, user.sub, {
-    name: "General",
-  });
-
-  return ApiResponse.success(savedWorkspace);
 };
 
-const updateWorkspace = async (workspaceId, updateData) => {
+const updateWorkspace = async (workspaceId, updateData, token) => {
   try {
-    const workspace = await Workspace.findByIdAndUpdate(
+    const workspaceResponse = await workspaceServiceClient.updateWorkspace(
+      token,
       workspaceId,
-      { ...updateData },
-      { new: true }
-    ).select("+progress");
-
-    if (!workspace) {
-      return ApiResponse.fail([new ErrorDetail("Workspace not found")]);
-    }
-
-    return ApiResponse.success(workspace);
+      updateData
+    );
+    return workspaceResponse;
   } catch (e) {
     return ApiResponse.fail([new ErrorDetail("Failed to update workspace")]);
   }
 };
 
-const deleteWorkspace = async (id) => {
+const deleteWorkspace = async (id, token) => {
   try {
     const deletionId = uuidv4();
     Logger.log(
@@ -175,14 +136,17 @@ const deleteWorkspace = async (id) => {
       "WORKSPACE REMOVE OPERATION STARTED DELETION ID: " + deletionId
     );
 
-    const workspace = await Workspace.findByIdAndUpdate(id, {
-      isDeleted: true,
-      deletedAt: new Date(),
-      deletionId: deletionId,
-    });
+    const workspaceResponse = await workspaceServiceClient.deleteWorkspace(
+      token,
+      id
+    );
+
+    if (!workspaceResponse.success) {
+      return workspaceResponse;
+    }
 
     await boardService.deleteBoardsByWorkspaceId(id, deletionId);
-    return ApiResponse.success(workspace);
+    return ApiResponse.success(workspaceResponse.data);
   } catch (e) {
     Logger.log("error", `Failed to remove workspace: ${e.message}`);
 
@@ -190,170 +154,99 @@ const deleteWorkspace = async (id) => {
   }
 };
 
-const saveWorkspaceToAuthApi = async (id, name, accessToken) => {
-  let data = JSON.stringify({
-    id: id,
-    name: name,
-  });
-
-  let config = {
-    method: "post",
-    maxBodyLength: Infinity,
-    url: process.env.AUTH_API_BASE_URL + "/api/Workspace/create",
-    headers: {
-      "x-api-key": process.env.AUTH_API_API_KEY,
-      "Content-Type": "application/json",
-      Authorization: "Bearer " + accessToken,
-    },
-    data: data,
-  };
-
-  return axios
-    .request(config)
-    .then((res) => {
-      return res.data;
-    })
-    .catch((error, res) => {
-      return {
-        status: false,
-      };
-    });
-};
-
-const addMemberToWorkspace = async (workspaceId, userData) => {
+const addMemberToWorkspace = async (workspaceId, userData, token) => {
   try {
-    const workspace = await Workspace.findById(workspaceId);
+    const user = await User.findOneAndUpdate(
+      { id: userData.id },
+      {
+        $setOnInsert: {
+          id: userData.userId,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profilePicture: userData.profilePicture,
+        },
+        $addToSet: { workspaces: workspaceId },
+      },
+      { upsert: true, new: true }
+    );
 
-    if (!workspace) {
-      return ApiResponse.fail([new ErrorDetail("Workspace not found")]);
+    const workspaceResponse = await workspaceServiceClient.addMemberToWorkspace(
+      token,
+      workspaceId,
+      user.id
+    );
+
+    if (!workspaceResponse.success) {
+      // If the call to the workspace service fails, we should roll back the local change.
+      await User.updateOne(
+        { id: user.id },
+        { $pull: { workspaces: workspaceId } }
+      );
+      return workspaceResponse;
     }
 
-    let user = await User.findOne({ id: userData.id }, "_id");
-
-    if (!user) {
-      user = new User({
-        id: userData.userId,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        profilePicture: userData.profilePicture,
-        workspaces: [workspaceId],
-      });
-
-      await user.save();
-    }
-
-    if (!workspace.members.includes(user._id)) {
-      workspace.members.push(user._id);
-      await workspace.save();
-    } else {
-      return ApiResponse.fail([
-        new ErrorDetail("User is already a member of this board"),
-      ]);
-    }
-
-    return ApiResponse.success(workspace);
+    return ApiResponse.success(workspaceResponse.data);
   } catch (e) {
     console.error(e);
     return ApiResponse.fail([new ErrorDetail("Failed to add member to workspace")]);
   }
 };
 
-const removeMemberFromWorkspace = async (workspaceId, userId) => {
+const removeMemberFromWorkspace = async (workspaceId, userId, token) => {
   try {
-    const workspace = await Workspace.findById(workspaceId);
+    const workspaceResponse = await workspaceServiceClient.removeMemberFromWorkspace(
+      token,
+      workspaceId,
+      userId
+    );
 
-    if (!workspace) {
-      return ApiResponse.fail([new ErrorDetail("Workspace not found")]);
+    if (!workspaceResponse.success) {
+      return workspaceResponse;
     }
 
-    const user = await User.findOne({ id: userId }, "_id");
+    await User.updateOne({ id: userId }, { $pull: { workspaces: workspaceId } });
 
-    if (!user) {
-      return ApiResponse.fail([new ErrorDetail("User not found")]);
-    }
-
-    const memberIndex = workspace.members.indexOf(user._id);
-
-    if (memberIndex === -1) {
-      return ApiResponse.fail([
-        new ErrorDetail("User is not a member of this workspace"),
-      ]);
-    }
-
-    workspace.members.splice(memberIndex, 1);
-    await workspace.save();
-
-    return ApiResponse.success(workspace);
+    return ApiResponse.success(workspaceResponse.data);
   } catch (e) {
     console.error(e);
     return ApiResponse.fail([new ErrorDetail("Failed to remove member from workspace")]);
   }
 };
 
-const updateWorkspaceReadyStatus = async (workspaceId, isReady) => {
+const updateWorkspaceReadyStatus = async (workspaceId, updateData, token) => {
   try {
-    const workspace = await Workspace.findByIdAndUpdate(
+    const workspaceResponse = await workspaceServiceClient.updateWorkspaceReadyStatus(
+      token,
       workspaceId,
-      { isReady: isReady },
-      { new: true }
+      updateData
     );
-
-    if (!workspace) {
-      return ApiResponse.fail([new ErrorDetail("Workspace not found")]);
-    }
-
-    return ApiResponse.success(workspace);
-  } catch (error) {
+    return workspaceResponse;
+  } catch (e) {
     return ApiResponse.fail([new ErrorDetail("Failed to update workspace ready status")]);
   }
 };
 
-const updateWorkspaceProgress = async (workspaceId, newState) => {
+const updateWorkspaceProgress = async (workspaceId, updateData, token) => {
   try {
-    const workspace = await Workspace.findById(workspaceId);
-    
-    if (!workspace) {
-      return ApiResponse.fail([new ErrorDetail("Workspace not found")]);
-    }
-
-    // State geçişlerini validate et
-    const isValidTransition = validateStateTransition(workspace.progress.state, newState);
-    if (!isValidTransition) {
-      return ApiResponse.fail([new ErrorDetail(`Invalid state transition from ${workspace.progress.state} to ${newState}`)]);
-    }
-
-    workspace.progress.state = newState;
-    await workspace.save();
-
-    return ApiResponse.success(workspace);
-  } catch (error) {
-    Logger.error("Error updating workspace progress:", error);
+    const workspaceResponse = await workspaceServiceClient.updateWorkspaceProgress(
+      token,
+      workspaceId,
+      updateData
+    );
+    return workspaceResponse;
+  } catch (e) {
     return ApiResponse.fail([new ErrorDetail("Failed to update workspace progress")]);
   }
 };
 
-const validateStateTransition = (currentState, newState) => {
-  const validTransitions = {
-    [WorkspaceProgressState.INITIAL]: [WorkspaceProgressState.WAITING_TASKS],
-    [WorkspaceProgressState.WAITING_TASKS]: [WorkspaceProgressState.TASKS_CREATED],
-    [WorkspaceProgressState.TASKS_CREATED]: [WorkspaceProgressState.COMPLETE],
-    [WorkspaceProgressState.COMPLETE]: [] // Complete state'inden başka state'e geçiş yok
-  };
-
-  return validTransitions[currentState]?.includes(newState) ?? false;
-};
-
-const getWorkspaceProgress = async (workspaceId) => {
+const getWorkspaceProgress = async (workspaceId, token) => {
   try {
-    const workspace = await Workspace.findById(workspaceId, 'progress');
-    
-    if (!workspace) {
-      return ApiResponse.fail([new ErrorDetail("Workspace not found")]);
-    }
-
-    return ApiResponse.success(workspace.progress);
-  } catch (error) {
-    Logger.error("Error getting workspace progress:", error);
+    const workspaceResponse = await workspaceServiceClient.getWorkspaceProgress(
+      token,
+      workspaceId
+    );
+    return workspaceResponse;
+  } catch (e) {
     return ApiResponse.fail([new ErrorDetail("Failed to get workspace progress")]);
   }
 };

@@ -1,19 +1,12 @@
 const httpStatus = require("http-status");
 const service = require("../services/workspace");
 
-const getAllWorkspaces = async (req, res) => {
-  const response = await service.getAllWorkspaces();
-
-  if (response.status) {
-    res.status(httpStatus.OK).send(response);
-    return;
-  }
-
-  res.status(httpStatus.BAD_REQUEST).send(response);
-};
-
 const getWorkspacesOfUser = async (req, res) => {
-  const response = await service.getWorkspacesOfUser(req.user, req.subscriptionId);
+  const response = await service.getWorkspacesOfUser(
+    req.user,
+    req.subscriptionId,
+    req.accessToken
+  );
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -24,7 +17,10 @@ const getWorkspacesOfUser = async (req, res) => {
 };
 
 const getWorkspaceById = async (req, res) => {
-  const response = await service.getWorkspaceById(req.workspaceId);
+  const response = await service.getWorkspaceById(
+    req.workspaceId,
+    req.accessToken
+  );
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -35,7 +31,14 @@ const getWorkspaceById = async (req, res) => {
 };
 
 const createWorkspace = async (req, res) => {
-  const response = await service.createWorkspace(req.body, req.user, req.accessToken, req.subscriptionId);
+  console.log("req.body", req.body);
+
+  const response = await service.createWorkspace(
+    req.body,
+    req.user,
+    req.accessToken,
+    req.subscriptionId
+  );
 
   if (response.status) {
     res.status(httpStatus.CREATED).send(response);
@@ -48,7 +51,8 @@ const createWorkspace = async (req, res) => {
 const updateWorkspace = async (req, res) => {
   const response = await service.updateWorkspace(
     req.workspaceId,
-    req.body
+    req.body,
+    req.accessToken
   );
 
   if (response.status) {
@@ -60,7 +64,11 @@ const updateWorkspace = async (req, res) => {
 };
 
 const addMemberToWorkspace = async (req, res) => {
-  const response = await service.addMemberToWorkspace(req.workspaceId, req.body);
+  const response = await service.addMemberToWorkspace(
+    req.workspaceId,
+    req.body,
+    req.accessToken
+  );
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -70,9 +78,12 @@ const addMemberToWorkspace = async (req, res) => {
   res.status(httpStatus.BAD_REQUEST).send(response);
 };
 
-
 const removeMemberFromWorkspace = async (req, res) => {
-  const response = await service.removeMemberFromWorkspace(req.workspaceId, req.body.userId);
+  const response = await service.removeMemberFromWorkspace(
+    req.workspaceId,
+    req.body.userId,
+    req.accessToken
+  );
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -83,7 +94,10 @@ const removeMemberFromWorkspace = async (req, res) => {
 };
 
 const deleteWorkspace = async (req, res) => {
-  const response = await service.deleteWorkspace(req.workspaceId, req.user);
+  const response = await service.deleteWorkspace(
+    req.workspaceId,
+    req.accessToken
+  );
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -96,7 +110,8 @@ const deleteWorkspace = async (req, res) => {
 const updateWorkspaceReadyStatus = async (req, res) => {
   const response = await service.updateWorkspaceReadyStatus(
     req.workspaceId,
-    req.body.isReady
+    req.body,
+    req.accessToken
   );
 
   if (response.status) {
@@ -110,7 +125,8 @@ const updateWorkspaceReadyStatus = async (req, res) => {
 const updateWorkspaceProgress = async (req, res) => {
   const response = await service.updateWorkspaceProgress(
     req.workspaceId,
-    req.body.state
+    req.body,
+    req.accessToken
   );
 
   if (response.status) {
@@ -122,7 +138,10 @@ const updateWorkspaceProgress = async (req, res) => {
 };
 
 const getWorkspaceProgress = async (req, res) => {
-  const response = await service.getWorkspaceProgress(req.workspaceId);
+  const response = await service.getWorkspaceProgress(
+    req.workspaceId,
+    req.accessToken
+  );
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -133,7 +152,6 @@ const getWorkspaceProgress = async (req, res) => {
 };
 
 module.exports = {
-  getAllWorkspaces,
   getWorkspaceById,
   getWorkspacesOfUser,
   createWorkspace,
@@ -143,5 +161,5 @@ module.exports = {
   removeMemberFromWorkspace,
   updateWorkspaceReadyStatus,
   updateWorkspaceProgress,
-  getWorkspaceProgress
+  getWorkspaceProgress,
 };

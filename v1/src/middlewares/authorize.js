@@ -19,6 +19,7 @@ const authorize = (permission) => async (req, res, next) => {
         );
     }
 
+    console.log("req.user", req.user);
     const user = await User.findOne({ id: req.user.sub });
 
     if (!user) {
