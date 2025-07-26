@@ -29,9 +29,6 @@ const checkIsUserSubscriptionValid = async (subscriptionId, accessToken) => {
 		userLimit: response.data.subscription_type.user_limit || 3,
 	  },
 	};
-	
-	console.log("RESPONSE::", response);
-	console.log("RESULT::", result);
 
 	return result;
   } catch (error) {

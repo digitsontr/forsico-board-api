@@ -8,6 +8,7 @@ apiClient.interceptors.request.use(
   (config) => {
     const correlationId = uuidv4();
     config.headers["X-Correlation-ID"] = correlationId;
+  
 
     apiClientLogger.info("Request Sent", {
       correlationId,

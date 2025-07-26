@@ -3,10 +3,9 @@ const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const User = require("../models/user");
 const userProfileServiceClient = require("./userProfileServiceClient");
 
-const getUserById = async (userId, token) => {
+const getUserById = async (userId) => {
   try {
     const userResponse = await userProfileServiceClient.getProfileByAuthId(
-      token,
       userId
     );
     if (!userResponse.success) {

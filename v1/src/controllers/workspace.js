@@ -19,7 +19,8 @@ const getWorkspacesOfUser = async (req, res) => {
 const getWorkspaceById = async (req, res) => {
   const response = await service.getWorkspaceById(
     req.workspaceId,
-    req.accessToken
+    req.accessToken,
+    req.subscriptionId
   );
 
   if (response.status) {
@@ -52,7 +53,8 @@ const updateWorkspace = async (req, res) => {
   const response = await service.updateWorkspace(
     req.workspaceId,
     req.body,
-    req.accessToken
+    req.accessToken,
+    req.subscriptionId
   );
 
   if (response.status) {
@@ -66,8 +68,9 @@ const updateWorkspace = async (req, res) => {
 const addMemberToWorkspace = async (req, res) => {
   const response = await service.addMemberToWorkspace(
     req.workspaceId,
-    req.body,
-    req.accessToken
+    req.body.userIds,
+    req.accessToken,
+    req.subscriptionId
   );
 
   if (response.status) {
@@ -82,7 +85,8 @@ const removeMemberFromWorkspace = async (req, res) => {
   const response = await service.removeMemberFromWorkspace(
     req.workspaceId,
     req.body.userId,
-    req.accessToken
+    req.accessToken,
+    req.subscriptionId
   );
 
   if (response.status) {
@@ -96,7 +100,8 @@ const removeMemberFromWorkspace = async (req, res) => {
 const deleteWorkspace = async (req, res) => {
   const response = await service.deleteWorkspace(
     req.workspaceId,
-    req.accessToken
+    req.accessToken,
+    req.subscriptionId
   );
 
   if (response.status) {
@@ -111,7 +116,8 @@ const updateWorkspaceReadyStatus = async (req, res) => {
   const response = await service.updateWorkspaceReadyStatus(
     req.workspaceId,
     req.body,
-    req.accessToken
+    req.accessToken,
+    req.subscriptionId
   );
 
   if (response.status) {
@@ -126,7 +132,8 @@ const updateWorkspaceProgress = async (req, res) => {
   const response = await service.updateWorkspaceProgress(
     req.workspaceId,
     req.body,
-    req.accessToken
+    req.accessToken,
+    req.subscriptionId
   );
 
   if (response.status) {
@@ -140,7 +147,8 @@ const updateWorkspaceProgress = async (req, res) => {
 const getWorkspaceProgress = async (req, res) => {
   const response = await service.getWorkspaceProgress(
     req.workspaceId,
-    req.accessToken
+    req.accessToken,
+    req.subscriptionId
   );
 
   if (response.status) {

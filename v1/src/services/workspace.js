@@ -17,7 +17,7 @@ const getAllWorkspaces = async () => {
 
 const getWorkspacesOfUser = async (user, subscriptionId, token) => {
   try {
-    const workspaceResponse = await workspaceServiceClient.getWorkspaces(
+    const workspaceResponse = await workspaceServiceClient.getMyWorkspaces(
       token,
       subscriptionId
     );
@@ -51,11 +51,12 @@ const getWorkspacesOfUser = async (user, subscriptionId, token) => {
   }
 };
 
-const getWorkspaceById = async (id, token) => {
+const getWorkspaceById = async (id, token, subscriptionId) => {
   try {
     const workspaceResponse = await workspaceServiceClient.getWorkspaceById(
       token,
-      id
+      id,
+      subscriptionId
     );
 
     if (!workspaceResponse.success) {
@@ -115,12 +116,13 @@ const createWorkspace = async (workspaceData, user, accessToken, subscriptionId)
   }
 };
 
-const updateWorkspace = async (workspaceId, updateData, token) => {
+const updateWorkspace = async (workspaceId, updateData, token, subscriptionId) => {
   try {
     const workspaceResponse = await workspaceServiceClient.updateWorkspace(
       token,
       workspaceId,
-      updateData
+      updateData,
+      subscriptionId
     );
     return workspaceResponse;
   } catch (e) {
@@ -128,7 +130,7 @@ const updateWorkspace = async (workspaceId, updateData, token) => {
   }
 };
 
-const deleteWorkspace = async (id, token) => {
+const deleteWorkspace = async (id, token, subscriptionId) => {
   try {
     const deletionId = uuidv4();
     Logger.log(
@@ -138,7 +140,8 @@ const deleteWorkspace = async (id, token) => {
 
     const workspaceResponse = await workspaceServiceClient.deleteWorkspace(
       token,
-      id
+      id,
+      subscriptionId
     );
 
     if (!workspaceResponse.success) {
@@ -154,36 +157,14 @@ const deleteWorkspace = async (id, token) => {
   }
 };
 
-const addMemberToWorkspace = async (workspaceId, userData, token) => {
+const addMemberToWorkspace = async (workspaceId, userIds, token, subscriptionId) => {
   try {
-    const user = await User.findOneAndUpdate(
-      { id: userData.id },
-      {
-        $setOnInsert: {
-          id: userData.userId,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          profilePicture: userData.profilePicture,
-        },
-        $addToSet: { workspaces: workspaceId },
-      },
-      { upsert: true, new: true }
-    );
-
     const workspaceResponse = await workspaceServiceClient.addMemberToWorkspace(
       token,
       workspaceId,
-      user.id
+      userIds,
+      subscriptionId
     );
-
-    if (!workspaceResponse.success) {
-      // If the call to the workspace service fails, we should roll back the local change.
-      await User.updateOne(
-        { id: user.id },
-        { $pull: { workspaces: workspaceId } }
-      );
-      return workspaceResponse;
-    }
 
     return ApiResponse.success(workspaceResponse.data);
   } catch (e) {
@@ -192,12 +173,13 @@ const addMemberToWorkspace = async (workspaceId, userData, token) => {
   }
 };
 
-const removeMemberFromWorkspace = async (workspaceId, userId, token) => {
+const removeMemberFromWorkspace = async (workspaceId, userId, token, subscriptionId) => {
   try {
     const workspaceResponse = await workspaceServiceClient.removeMemberFromWorkspace(
       token,
       workspaceId,
-      userId
+      userId,
+      subscriptionId
     );
 
     if (!workspaceResponse.success) {
@@ -213,12 +195,13 @@ const removeMemberFromWorkspace = async (workspaceId, userId, token) => {
   }
 };
 
-const updateWorkspaceReadyStatus = async (workspaceId, updateData, token) => {
+const updateWorkspaceReadyStatus = async (workspaceId, updateData, token, subscriptionId) => {
   try {
     const workspaceResponse = await workspaceServiceClient.updateWorkspaceReadyStatus(
       token,
       workspaceId,
-      updateData
+      updateData,
+      subscriptionId
     );
     return workspaceResponse;
   } catch (e) {
@@ -226,12 +209,13 @@ const updateWorkspaceReadyStatus = async (workspaceId, updateData, token) => {
   }
 };
 
-const updateWorkspaceProgress = async (workspaceId, updateData, token) => {
+const updateWorkspaceProgress = async (workspaceId, updateData, token, subscriptionId) => {
   try {
     const workspaceResponse = await workspaceServiceClient.updateWorkspaceProgress(
       token,
       workspaceId,
-      updateData
+      updateData,
+      subscriptionId
     );
     return workspaceResponse;
   } catch (e) {
@@ -239,11 +223,12 @@ const updateWorkspaceProgress = async (workspaceId, updateData, token) => {
   }
 };
 
-const getWorkspaceProgress = async (workspaceId, token) => {
+const getWorkspaceProgress = async (workspaceId, token, subscriptionId) => {
   try {
     const workspaceResponse = await workspaceServiceClient.getWorkspaceProgress(
       token,
-      workspaceId
+      workspaceId,
+      subscriptionId
     );
     return workspaceResponse;
   } catch (e) {

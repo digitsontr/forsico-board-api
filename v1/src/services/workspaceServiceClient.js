@@ -2,32 +2,33 @@ const apiClient = require("./apiClient");
 const { ErrorDetail, ApiResponse } = require("../models/apiResponse");
 
 const WORKSPACE_SERVICE_URL =
-  process.env.WORKSPACE_SERVICE_URL || "https://staging-api.forsico.io/workspace";
+  process.env.WORKSPACE_SERVICE_URL || "";
 
 const workspaceServiceClient = {
-  async getWorkspaces(token, subscriptionId) {
+  async getMyWorkspaces(token, subscriptionId) {
     try {
       const response = await apiClient.get(
-        `${WORKSPACE_SERVICE_URL}/workspaces`,
+        `${WORKSPACE_SERVICE_URL}/workspaces/my`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, "x-subscription-id": subscriptionId },
           params: { subscriptionId },
         }
       );
       return ApiResponse.success(response.data);
     } catch (error) {
       return ApiResponse.fail([
-        new ErrorDetail("Failed to retrieve workspaces from workspace service"),
+        new ErrorDetail("Failed to retrieve user's workspaces from workspace service"),
       ]);
     }
   },
 
-  async getWorkspaceById(token, workspaceId) {
+  async getWorkspaceById(token, workspaceId, subscriptionId) {
     try {
       const response = await apiClient.get(
         `${WORKSPACE_SERVICE_URL}/workspaces/${workspaceId}`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, "x-subscription-id": subscriptionId },
+          params: { subscriptionId },
         }
       );
       return ApiResponse.success(response.data);
@@ -44,7 +45,7 @@ const workspaceServiceClient = {
         `${WORKSPACE_SERVICE_URL}/workspaces`,
         { ...workspaceData, subscriptionId },
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, "x-subscription-id": subscriptionId },
         }
       );
       return ApiResponse.success(response.data);
@@ -55,13 +56,14 @@ const workspaceServiceClient = {
     }
   },
 
-  async updateWorkspace(token, workspaceId, updateData) {
+  async updateWorkspace(token, workspaceId, updateData, subscriptionId) {
     try {
       const response = await apiClient.put(
         `${WORKSPACE_SERVICE_URL}/workspaces/${workspaceId}`,
         updateData,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, "x-subscription-id": subscriptionId },
+          params: { subscriptionId },
         }
       );
       return ApiResponse.success(response.data);
@@ -72,12 +74,13 @@ const workspaceServiceClient = {
     }
   },
 
-  async deleteWorkspace(token, workspaceId) {
+  async deleteWorkspace(token, workspaceId, subscriptionId) {
     try {
       const response = await apiClient.delete(
         `${WORKSPACE_SERVICE_URL}/workspaces/${workspaceId}`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, "x-subscription-id": subscriptionId },
+          params: { subscriptionId },
         }
       );
       return ApiResponse.success(response.data);
@@ -88,13 +91,14 @@ const workspaceServiceClient = {
     }
   },
 
-  async addMemberToWorkspace(token, workspaceId, userId) {
+  async addMemberToWorkspace(token, workspaceId, userIds, subscriptionId) {
     try {
       const response = await apiClient.post(
         `${WORKSPACE_SERVICE_URL}/workspaces/${workspaceId}/users`,
-        { userIds: [userId] },
+        { userIds: userIds },
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, "x-subscription-id": subscriptionId },
+          params: { subscriptionId },
         }
       );
       return ApiResponse.success(response.data);
@@ -105,12 +109,13 @@ const workspaceServiceClient = {
     }
   },
 
-  async removeMemberFromWorkspace(token, workspaceId, userId) {
+  async removeMemberFromWorkspace(token, workspaceId, userId, subscriptionId) {
     try {
       const response = await apiClient.delete(
         `${WORKSPACE_SERVICE_URL}/workspaces/${workspaceId}/users`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, "x-subscription-id": subscriptionId },
+          params: { subscriptionId },
           data: { userIds: [userId] },
         }
       );
@@ -124,13 +129,14 @@ const workspaceServiceClient = {
     }
   },
 
-  async updateWorkspaceReadyStatus(token, workspaceId, updateData) {
+  async updateWorkspaceReadyStatus(token, workspaceId, updateData, subscriptionId) {
     try {
       const response = await apiClient.patch(
         `${WORKSPACE_SERVICE_URL}/workspaces/${workspaceId}/ready-status`,
         updateData,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, "x-subscription-id": subscriptionId },
+          params: { subscriptionId },
         }
       );
       return ApiResponse.success(response.data);
@@ -141,13 +147,14 @@ const workspaceServiceClient = {
     }
   },
 
-  async updateWorkspaceProgress(token, workspaceId, updateData) {
+  async updateWorkspaceProgress(token, workspaceId, updateData, subscriptionId) {
     try {
       const response = await apiClient.patch(
         `${WORKSPACE_SERVICE_URL}/workspaces/${workspaceId}/progress`,
         updateData,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, "x-subscription-id": subscriptionId },
+          params: { subscriptionId },
         }
       );
       return ApiResponse.success(response.data);
@@ -158,12 +165,13 @@ const workspaceServiceClient = {
     }
   },
 
-  async getWorkspaceProgress(token, workspaceId) {
+  async getWorkspaceProgress(token, workspaceId, subscriptionId) {
     try {
       const response = await apiClient.get(
         `${WORKSPACE_SERVICE_URL}/workspaces/${workspaceId}/progress`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, "x-subscription-id": subscriptionId },
+          params: { subscriptionId },
         }
       );
       return ApiResponse.success(response.data);

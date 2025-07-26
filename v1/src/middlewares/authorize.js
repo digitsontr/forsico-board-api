@@ -3,7 +3,6 @@ const subscriptionService = require("../services/subscription");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const { FORBIDDEN, UNAUTHORIZED } = require("http-status");
 const { Workspace } = require("../models/workspace");
-const User = require("../models/user");
 const ExceptionLogger = require("../scripts/logger/exception");
 
 const authorize = (permission) => async (req, res, next) => {
@@ -20,7 +19,7 @@ const authorize = (permission) => async (req, res, next) => {
     }
 
     console.log("req.user", req.user);
-    const user = await User.findOne({ id: req.user.sub });
+    const user = (await userService.getUserById(req.user.sub, req.accessToken)).data;
 
     if (!user) {
       return res
@@ -126,7 +125,7 @@ const authorize = (permission) => async (req, res, next) => {
     ExceptionLogger.error("Authorization error:", error);
     return res
       .status(FORBIDDEN)
-      .json(ApiResponse.fail([new ErrorDetail("Authorization failed")]));
+      .json(ApiResponse.fail([new ErrorDetail("Authorization failed!")]));
   }
 };
 

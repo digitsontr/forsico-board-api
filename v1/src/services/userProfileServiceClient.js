@@ -2,15 +2,21 @@ const apiClient = require("./apiClient");
 const { ErrorDetail, ApiResponse } = require("../models/apiResponse");
 
 const USER_PROFILE_SERVICE_URL =
-  process.env.USER_PROFILE_SERVICE_URL || "https://staging-api.forsico.io/user-profile";
+  process.env.USER_PROFILE_SERVICE_URL || "http://localhost:3001";
+
+const USER_PROFILE_API_KEY = process.env.USER_PROFILE_API_KEY || "mock-board-api-key";
+const SERVICE_NAME = process.env.SERVICE_NAME || 'board-api';
 
 const userProfileServiceClient = {
-  async getProfileByAuthId(token, authId) {
+  async getProfileByAuthId(authId) {
     try {
       const response = await apiClient.get(
-        `${USER_PROFILE_SERVICE_URL}/api/v1/profiles/auth/${authId}`,
+        `${USER_PROFILE_SERVICE_URL}/profiles/${authId}`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { 
+            'x-api-key': USER_PROFILE_API_KEY,
+            'x-service-name': SERVICE_NAME
+          },
         }
       );
       return ApiResponse.success(response.data);

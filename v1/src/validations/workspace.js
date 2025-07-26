@@ -12,10 +12,7 @@ const updateValidation = Joi.object({
 });
 
 const addMemberToWorkspaceValidation = Joi.object({
-  userId: Joi.string().required().min(36).max(36),
-  firstName: Joi.string().required(),
-  lastName: Joi.string().required(),
-  profilePicture: Joi.string().optional(),
+  userIds: Joi.array().items(Joi.string().required().min(36).max(36)).required(),
 });
 
 const removeMemberFromWorkspaceValidation = Joi.object({
