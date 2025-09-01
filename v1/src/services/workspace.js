@@ -1,6 +1,5 @@
 const { Workspace, WorkspaceProgressState } = require("../models/workspace");
 const User = require("../models/user");
-const axios = require("axios");
 const mongoose = require("mongoose");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const ExceptionLogger = require("../scripts/logger/exception");
@@ -191,33 +190,12 @@ const deleteWorkspace = async (id) => {
 };
 
 const saveWorkspaceToAuthApi = async (id, name, accessToken) => {
-  let data = JSON.stringify({
-    id: id,
-    name: name,
-  });
-
-  let config = {
-    method: "post",
-    maxBodyLength: Infinity,
-    url: process.env.AUTH_API_BASE_URL + "/api/Workspace/create",
-    headers: {
-      "x-api-key": process.env.AUTH_API_API_KEY,
-      "Content-Type": "application/json",
-      Authorization: "Bearer " + accessToken,
-    },
-    data: data,
+  // Simplified: No external API call needed for monolithic architecture
+  Logger.log('info', `Workspace ${id} (${name}) saved locally - no external API call needed`);
+  return {
+    status: true,
+    message: "Workspace saved successfully"
   };
-
-  return axios
-    .request(config)
-    .then((res) => {
-      return res.data;
-    })
-    .catch((error, res) => {
-      return {
-        status: false,
-      };
-    });
 };
 
 const addMemberToWorkspace = async (workspaceId, userData) => {
