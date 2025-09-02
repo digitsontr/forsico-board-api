@@ -468,7 +468,7 @@ const addMemberToTask = async (taskId, userData) => {
 			return ApiResponse.fail([new ErrorDetail("Task not found")]);
 		}
 
-		const user = await userService.getUserById(userData.userId);
+		const user = await userService.getUserById(userData.userId).data || {};
 
 		if (!user) {
 			return ApiResponse.fail([new ErrorDetail("User not found")]);
@@ -510,7 +510,7 @@ const removeMemberFromTask = async (taskId, userId) => {
 			return ApiResponse.fail([new ErrorDetail("Task not found")]);
 		}
 
-		const user = await userService.getUserById(userId);
+		const user = await userService.getUserById(userId).data || {};
 
 		if (!user) {
 			return ApiResponse.fail([new ErrorDetail("User not found")]);

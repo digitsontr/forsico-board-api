@@ -362,7 +362,7 @@ const addMemberToBoard = async (boardId, userData) => {
       return ApiResponse.fail([new ErrorDetail("Board not found")]);
     }
 
-    const user = await userService.getUserById(userData.userId);
+    const user = await userService.getUserById(userData.userId).data || {};
 
     if (!user) {
       return ApiResponse.fail([new ErrorDetail("User not found")]);
@@ -404,7 +404,7 @@ const removeMemberFromBoard = async (boardId, userId) => {
       return ApiResponse.fail([new ErrorDetail("Board not found")]);
     }
 
-    const user = await userService.getUserById(userId);
+    const user = await userService.getUserById(userId).data || {};
 
     if (!user) {
       return ApiResponse.fail([new ErrorDetail("User not found")]);
