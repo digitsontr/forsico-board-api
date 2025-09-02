@@ -1,4 +1,6 @@
 const TaskStatus = require("../models/taskStatus");
+const Task = require("../models/task");
+const List = require("../models/list");
 const User = require("../models/user");
 const ExceptionLogger = require("../scripts/logger/exception");
 const Logger = require("../scripts/logger/taskStatus");
@@ -95,7 +97,7 @@ const updateTaskStatus = async (statusId, statusData) => {
         name: statusData.name,
         color: statusData.color || "#000000",
         allowed_transitions: statusData.allowed_transitions || [],
-        list_id: statusData.list_id || null,
+        listId: statusData.listId || null,
       },
       { new: true }
     );
@@ -104,6 +106,21 @@ const updateTaskStatus = async (statusId, statusData) => {
       return ApiResponse.fail([
         new ErrorDetail("Task status not found or update failed"),
       ]);
+    }
+
+    // Sync with related List if listId exists and name/color changed
+    if (updatedStatus.listId && (statusData.name || statusData.color)) {
+      try {
+        const updateData = {};
+        if (statusData.name) updateData.name = statusData.name;
+        if (statusData.color) updateData.color = statusData.color;
+
+        await List.findByIdAndUpdate(updatedStatus.listId, updateData);
+        Logger.log('info', `Synced List ${updatedStatus.listId} with TaskStatus ${statusId}`);
+      } catch (syncError) {
+        Logger.log('warn', `Failed to sync List with TaskStatus: ${syncError.message}`);
+        // Don't fail the main operation if sync fails
+      }
     }
 
     return ApiResponse.success(updatedStatus);
@@ -115,12 +132,12 @@ const updateTaskStatus = async (statusId, statusData) => {
 
 const deleteTaskStatus = async (statusId, deletionId, defaultStatusId) => {
   try {
-    if (!deletionId) {
-      const status = await TaskStatus.findById(statusId);
-      if (!status) {
-        return ApiResponse.fail([new ErrorDetail("Task status not found")]);
-      }
+    const status = await TaskStatus.findById(statusId);
+    if (!status) {
+      return ApiResponse.fail([new ErrorDetail("Task status not found")]);
+    }
 
+    if (!deletionId) {
       const defaultStatus = await TaskStatus.findOne({ name: "Backlog" });
       if (!defaultStatus) {
         return ApiResponse.fail([new ErrorDetail("Default status not found")]);
@@ -139,6 +156,21 @@ const deleteTaskStatus = async (statusId, deletionId, defaultStatusId) => {
       deletedAt: new Date(),
       deletionId: deletionId,
     });
+
+    // Sync with related List if listId exists
+    if (status.listId && !deletionId) {
+      try {
+        await List.findByIdAndUpdate(status.listId, {
+          isDeleted: true,
+          deletedAt: new Date(),
+          deletionId: deletionId,
+        });
+        Logger.log('info', `Synced List ${status.listId} deletion with TaskStatus ${statusId}`);
+      } catch (syncError) {
+        Logger.log('warn', `Failed to sync List deletion with TaskStatus: ${syncError.message}`);
+        // Don't fail the main operation if sync fails
+      }
+    }
 
     return ApiResponse.success(updatedStatus);
   } catch (e) {

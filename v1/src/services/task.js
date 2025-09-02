@@ -89,27 +89,24 @@ const updateTaskStatus = async (taskId, newStatusId, userId) => {
 			]);
 		}
 
-		if (task.listId) {
-			const oldList = await List.findById(task.listId);
-			if (oldList) {
-				oldList.tasks.pull(task._id);
-				await oldList.save();
-			}
+		// Move task between lists if needed
+		if (task.listId.toString() !== newListId.toString()) {
+			await moveTaskToNewList(taskId, task.listId, newListId);
 		}
 
-		task.statusId = newStatusId;
-		task.listId = newListId;
-		await task.save();
+		// Update task with new status and list
+		const updatedTask = await Task.findByIdAndUpdate(
+			taskId,
+			{
+				statusId: newStatusId,
+				listId: newListId
+			},
+			{ new: true }
+		)
+		.populate("assignee", "firstName lastName profilePicture")
+		.populate("statusId", "_id name");
 
-		const newList = await List.findById(newListId);
-		if (newList) {
-			newList.tasks.push(task._id);
-			await newList.save();
-		}
-
-		const updatedTask = await Task.findById(taskId)
-			.populate("assignee", "firstName lastName profilePicture")
-			.populate("statusId", "_id name");
+		Logger.log('info', `Task ${taskId}: Status changed to ${newStatusId}, synced list to ${newListId}`);
 
 		await logAndPublishNotification("Task", "statusChange", {
 			user,
@@ -123,7 +120,7 @@ const updateTaskStatus = async (taskId, newStatusId, userId) => {
 
 		return ApiResponse.success(updatedTask);
 	} catch (error) {
-		console.error("Failed to update task status:", error);
+		Logger.log('error', `Failed to update task status: ${error.message}`);
 		return ApiResponse.fail([new ErrorDetail("Failed to update task status")]);
 	}
 };
@@ -235,45 +232,54 @@ const updateTask = async (id, updateData, userId) => {
 			]);
 		}
 
+		// Handle List/Status sync - prioritize explicit changes
+		let finalListId = updateData.listId || task.listId;
+		let finalStatusId = updateData.statusId || task.statusId;
+
+		// If listId changed, sync statusId
 		if (updateData.listId && task.listId.toString() !== updateData.listId) {
+			const newStatus = await TaskStatus.findOne({
+				listId: updateData.listId,
+				isDeleted: false
+			});
+
+			if (newStatus) {
+				finalStatusId = newStatus._id;
+				Logger.log('info', `Task ${id}: List changed to ${updateData.listId}, syncing status to ${newStatus._id}`);
+			}
+		}
+
+		// If statusId changed, sync listId
+		else if (updateData.statusId && task.statusId.toString() !== updateData.statusId) {
+			const newStatus = await TaskStatus.findById(updateData.statusId);
+			if (newStatus && newStatus.listId) {
+				finalListId = newStatus.listId;
+				Logger.log('info', `Task ${id}: Status changed to ${updateData.statusId}, syncing list to ${newStatus.listId}`);
+			}
+		}
+
+		// Update task with final values
+		const finalUpdateData = {
+			...updateData,
+			listId: finalListId,
+			statusId: finalStatusId
+		};
+
+		// Move task between lists if needed
+		if (task.listId.toString() !== finalListId.toString()) {
 			const taskIds = [task._id, ...task.subtasks.map((subtask) => subtask)];
 
-			const newStatus = await TaskStatus.findOne({ listId: updateData.listId });
-
-			console.log("NEW STATUS", newStatus);
-			
 			await Promise.allSettled(
 				taskIds.map(async (taskId) => {
-					await moveTaskToNewList(taskId, task.listId, updateData.listId);
-
-					if (newStatus) {
-						await Task.findByIdAndUpdate(taskId, { statusId: newStatus._id });
-					}
+					await moveTaskToNewList(taskId, task.listId, finalListId);
 				})
 			);
 		}
 
-		if (
-			updateData.statusId &&
-			task.statusId.toString() !== updateData.statusId
-		) {
-			const newStatus = await TaskStatus.findById(updateData.statusId);
-			if (newStatus && newStatus.listId) {
-				const oldList = await List.findById(task.listId);
-				if (oldList) {
-					oldList.tasks.pull(task._id);
-					await oldList.save();
-				}
-
-				const newList = await List.findById(newStatus.listId);
-				if (newList) {
-					newList.tasks.push(task._id);
-					await newList.save();
-				}
-
-				await Task.findByIdAndUpdate(id, { listId: newStatus.listId });
-			}
-		}
+		// Apply final update
+		const finalUpdatedTask = await Task.findByIdAndUpdate(id, finalUpdateData, {
+			new: true,
+		});
 
 		const changes = detectTaskChanges(task, updateData);
 		if (changes.length > 0) {
@@ -379,11 +385,13 @@ const moveTasksToFirstList = async (listId) => {
 		if (result.status === "rejected") {
 			Logger.log(
 				"error",
-				`List ${lists[index]._id} can't be removed:`,
+				`Task ${tasks[index]._id} can't be moved:`,
 				result.reason
 			);
 		}
 	});
+
+	return true;
 };
 
 const deleteTaskByBoard = async (boardId, deletionId) => {

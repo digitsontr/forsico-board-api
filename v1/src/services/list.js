@@ -141,6 +141,31 @@ const updateList = async (id, updateData) => {
       { session, new: true }
     );
 
+    // Sync with related TaskStatus if name or color changed
+    if (updateData.name || updateData.color) {
+      try {
+        const syncData = {};
+        if (updateData.name) syncData.name = updateData.name;
+        if (updateData.color) syncData.color = updateData.color;
+
+        await TaskStatus.findOneAndUpdate(
+          { listId: id },
+          syncData,
+          { session }
+        );
+        Logger.log({
+          level: "info",
+          message: `Synced TaskStatus with List ${id}`
+        });
+      } catch (syncError) {
+        Logger.log({
+          level: "warn",
+          message: `Failed to sync TaskStatus with List: ${syncError.message}`
+        });
+        // Don't fail the main operation if sync fails
+      }
+    }
+
     await session.commitTransaction();
     session.endSession();
 
@@ -180,6 +205,28 @@ const deleteList = async (listId, deletionId) => {
         new: true,
       }
     );
+
+    // Sync with related TaskStatus
+    try {
+      await TaskStatus.findOneAndUpdate(
+        { listId: listId },
+        {
+          isDeleted: true,
+          deletedAt: new Date(),
+          deletionId: deletionId,
+        }
+      );
+      Logger.log({
+        level: "info",
+        message: `Synced TaskStatus deletion with List ${listId}`
+      });
+    } catch (syncError) {
+      Logger.log({
+        level: "warn",
+        message: `Failed to sync TaskStatus deletion with List: ${syncError.message}`
+      });
+      // Don't fail the main operation if sync fails
+    }
 
     return ApiResponse.success(updatedList);
   } catch (e) {
