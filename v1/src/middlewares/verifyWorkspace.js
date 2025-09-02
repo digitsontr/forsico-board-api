@@ -35,6 +35,8 @@ const userHasAccessToWorkspace = async (userId, workspaceId) => {
       return false;
     }
 
+    console.log("USER::", user)
+
     const workspace = await WorkspaceService.getWorkspaceById(workspaceId);
 
     if (!workspace) {
@@ -42,7 +44,7 @@ const userHasAccessToWorkspace = async (userId, workspaceId) => {
     }
 
     const isMember = workspace.data?.members?.some(
-      (member) => member._id.toString() === user._id.toString()
+      (member) => member._id.toString() === user.data._id.toString()
     );
 
     return isMember;
