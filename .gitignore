@@ -128,3 +128,7 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+v1/scripts/mongo/README.md
+.gitignore
+v1/scripts/mongo/checkTaskStatusConsistency.js
+v1/scripts/mongo/fixTaskStatusListLinks.js

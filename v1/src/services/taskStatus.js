@@ -208,6 +208,58 @@ const deleteTaskStatusesByBoard = async (boardId, deletionId) => {
   return true;
 };
 
+/**
+ * Fix existing TaskStatuses without listId by linking them to lists
+ * @param {string} boardId - Board ID to fix
+ */
+const fixTaskStatusListLinks = async (boardId) => {
+  try {
+    // Get all statuses without listId for this board
+    const statusesWithoutList = await TaskStatus.find({
+      boardId: boardId,
+      listId: { $exists: false },
+      isDeleted: false
+    });
+
+    if (statusesWithoutList.length === 0) {
+      return ApiResponse.success({ message: "No statuses need fixing" });
+    }
+
+    // Get all lists for this board
+    const lists = await List.find({
+      boardId: boardId,
+      isDeleted: false
+    }).sort({ createdAt: 1 });
+
+    if (lists.length === 0) {
+      return ApiResponse.fail([new ErrorDetail("No lists found for board")]);
+    }
+
+    // Link statuses to lists (round-robin or by name matching)
+    const updates = [];
+    for (let i = 0; i < statusesWithoutList.length; i++) {
+      const status = statusesWithoutList[i];
+      const list = lists[i % lists.length]; // Round-robin assignment
+
+      updates.push(
+        TaskStatus.findByIdAndUpdate(status._id, { listId: list._id })
+      );
+
+      Logger.log('info', `Linking status ${status.name} (${status._id}) to list ${list.name} (${list._id})`);
+    }
+
+    await Promise.all(updates);
+
+    return ApiResponse.success({
+      message: `Fixed ${statusesWithoutList.length} statuses`,
+      fixed: statusesWithoutList.length
+    });
+  } catch (error) {
+    Logger.log('error', `Error fixing task status list links: ${error.message}`);
+    return ApiResponse.fail([new ErrorDetail("Failed to fix task status list links")]);
+  }
+};
+
 module.exports = {
   createTaskStatus,
   getStatusById,
@@ -216,4 +268,5 @@ module.exports = {
   deleteTaskStatus,
   createDefaultTaskStatuses,
   deleteTaskStatusesByBoard,
+  fixTaskStatusListLinks,
 };

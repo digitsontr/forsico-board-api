@@ -246,6 +246,16 @@ const updateTask = async (id, updateData, userId) => {
 			if (newStatus) {
 				finalStatusId = newStatus._id;
 				Logger.log('info', `Task ${id}: List changed to ${updateData.listId}, syncing status to ${newStatus._id}`);
+			} else {
+				// Fallback: Find any status for this board if no list-specific status exists
+				const fallbackStatus = await TaskStatus.findOne({
+					boardId: task.boardId,
+					isDeleted: false
+				});
+				if (fallbackStatus) {
+					finalStatusId = fallbackStatus._id;
+					Logger.log('warn', `Task ${id}: No status found for list ${updateData.listId}, using fallback status ${fallbackStatus._id}`);
+				}
 			}
 		}
 
@@ -373,10 +383,7 @@ const moveTasksToFirstList = async (listId) => {
 
 	const results = await Promise.allSettled(
 		tasks.map(async (task) => {
-			const updatedTask = await Task.findByIdAndUpdate(task._id, {
-				listId: firstList._id,
-			});
-
+			// moveTaskToNewList now handles both list movement and status sync
 			await moveTaskToNewList(task._id, listId, firstList._id);
 		})
 	);
@@ -424,6 +431,7 @@ const deleteTaskByBoard = async (boardId, deletionId) => {
 };
 
 const moveTaskToNewList = async (taskId, oldListId, newListId) => {
+	// Update list arrays
 	const oldList = await List.findById(oldListId);
 	if (oldList) {
 		oldList.tasks.pull(taskId);
@@ -434,6 +442,21 @@ const moveTaskToNewList = async (taskId, oldListId, newListId) => {
 	if (newList) {
 		newList.tasks.push(taskId);
 		await newList.save();
+	}
+
+	// Find and update task's status to match new list
+	const newListStatus = await TaskStatus.findOne({
+		listId: newListId,
+		isDeleted: false
+	});
+
+	if (newListStatus) {
+		await Task.findByIdAndUpdate(taskId, {
+			statusId: newListStatus._id
+		});
+		Logger.log('info', `Task ${taskId}: Moved to list ${newListId}, updated status to ${newListStatus._id}`);
+	} else {
+		Logger.log('warn', `No status found for list ${newListId}, task ${taskId} status not updated`);
 	}
 };
 

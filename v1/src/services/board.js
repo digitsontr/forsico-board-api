@@ -456,6 +456,24 @@ const deleteBoardsByWorkspaceId = async (workspaceId, deletionId) => {
   return true;
 };
 
+/**
+ * Fix TaskStatus-List links for a board
+ * @param {string} boardId - Board ID to fix
+ */
+const fixBoardTaskStatusLinks = async (boardId) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(boardId)) {
+      return ApiResponse.fail([new ErrorDetail("Invalid board ID format")]);
+    }
+
+    const result = await taskStatusService.fixTaskStatusListLinks(boardId);
+    return result;
+  } catch (error) {
+    Logger.error(`Error fixing board task status links: ${error.message}`, error);
+    return ApiResponse.fail([new ErrorDetail("Failed to fix board task status links")]);
+  }
+};
+
 module.exports = {
   getBoardsOfWorkspace,
   getBoardById,
@@ -466,4 +484,5 @@ module.exports = {
   addMemberToBoard,
   removeMemberFromBoard,
   deleteBoardsByWorkspaceId,
+  fixBoardTaskStatusLinks,
 };
