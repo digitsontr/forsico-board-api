@@ -24,7 +24,8 @@ const getWorkspacesOfUser = async (user, subscriptionId) => {
     if (userEntity === null) {
       return ApiResponse.fail([new ErrorDetail("There is no user!")]);
     }
-
+    console.log("USER",userEntity);
+    console.log("SUBSCRIPTION ID", subscriptionId);
     const workspaces = await Workspace.find(
       {
         members: userEntity._id,

@@ -84,6 +84,7 @@ const createInvitations = async (
 
 const acceptInvitation = async (invitationId, user) => {
     try {
+        console.log("INVITATION ACCEPT STARTED")
         let existingUser = await User.findOne({
             id: user.sub
         });
@@ -96,18 +97,17 @@ const acceptInvitation = async (invitationId, user) => {
                 lastName: user.family_name,
                 profilePicture: user.picture,
             });
+
+             await userToSave.save();
         } else {
             userToSave = existingUser;
         }
-
-        await userToSave.save();
 
         const invitation = await Invitation.findById(invitationId);
         if (!invitation || invitation.status !== "pending") {
             return ApiResponse.fail([new ErrorDetail("Invalid invitation")]);
         }
-
-        // Tüm workspaceleri bul ve kullanıcıyı ekle
+     
         const workspaces = await Workspace.find({
             _id: {
                 $in: invitation.workspaces
@@ -127,8 +127,6 @@ const acceptInvitation = async (invitationId, user) => {
             return Promise.resolve();
         });
 
-        console.log('FY API ');
-        console.log("USERID", existingUser.id);
         const subresp = await axios.post(`https://forsico-subscription-service-hmh5asdyb2dqc8gv.eastus-01.azurewebsites.net/api/user/subscriptions/add_user_to_subscription/${invitation.subscriptionId}`, {
             "user_id": existingUser.id
         }, {
@@ -136,9 +134,7 @@ const acceptInvitation = async (invitationId, user) => {
                 'Content-Type': 'application/json',
                 'x-api-key': 'f67d21c8b55e8733d4d5a43c'
             }
-        })
-
-        console.log('subresp::', subresp);
+        });
 
         // Invitation'ı güncelle
         invitation.status = "accepted";
