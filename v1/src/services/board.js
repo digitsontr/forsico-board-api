@@ -362,10 +362,11 @@ const addMemberToBoard = async (boardId, userData) => {
       return ApiResponse.fail([new ErrorDetail("Board not found")]);
     }
 
-    const user = await userService.getUserById(userData.userId).data || {};
-
+    let user = await userService.getUserById(userData.userId)
     if (!user) {
       return ApiResponse.fail([new ErrorDetail("User not found")]);
+    }else{
+        user = user.data
     }
 
     const workspace = await Workspace.findById(board.workspaceId);
@@ -374,7 +375,16 @@ const addMemberToBoard = async (boardId, userData) => {
       return ApiResponse.fail([new ErrorDetail("Workspace not found")]);
     }
 
-    if (!workspace.members.includes(user._id)) {
+    console.log("WORKSPACE DATA::", workspace);
+    console.log("USER DATA::", user);
+
+    var workspaceMembers = workspace.members.map((member) => member.toString());
+
+    console.log("WORKSPACE MEMBERS::", workspaceMembers);
+    console.log("USER ID::", user._id);
+    console.log("USER EXISTS::", workspaceMembers.includes(user._id));
+
+    if (!workspaceMembers.includes(user._id)) {
       return ApiResponse.fail([
         new ErrorDetail("User is not a member of the workspace"),
       ]);
