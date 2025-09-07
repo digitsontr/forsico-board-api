@@ -391,12 +391,30 @@ const getWorkspaceMembersWithRoles = async (workspaceId, subscriptionId) => {
             scopeId: workspaceId
           });
 
+          Logger.log('debug', 'Workspace roles for member', {
+            memberId: member.id,
+            workspaceRoles: workspaceRoles
+          });
+
           // Get user's board memberships
+          // Board.members contains User ObjectIds, not user.id strings
+          Logger.log('debug', 'Searching boards for member', {
+            memberId: member.id,
+            memberObjectId: member._id,
+            workspaceId
+          });
+
           const userBoards = await Board.find({
-            _id: { $in: workspaceBoards.map(b => b._id) },
-            members: member.id,
+            workspaceId: workspaceId,
+            members: member._id, // Board.members array contains User ObjectIds
             isDeleted: false
           }, '_id name');
+
+          Logger.log('debug', 'Found boards for member', {
+            memberId: member.id,
+            boardCount: userBoards.length,
+            boards: userBoards.map(b => ({ id: b._id, name: b.name }))
+          });
 
           // Get board roles for each board
           const boardsWithRoles = await Promise.all(
@@ -412,7 +430,7 @@ const getWorkspaceMembersWithRoles = async (workspaceId, subscriptionId) => {
                 return {
                   boardId: board._id.toString(),
                   boardName: board.name,
-                  userRole: boardRoles.length > 0 ? boardRoles[0].roleTemplateName : 'Board Member'
+                  userRole: boardRoles.length > 0 ? boardRoles[0].roleTemplateName : null
                 };
               } catch (error) {
                 Logger.log('error', 'Error getting board role', {
@@ -424,7 +442,7 @@ const getWorkspaceMembersWithRoles = async (workspaceId, subscriptionId) => {
                 return {
                   boardId: board._id.toString(),
                   boardName: board.name,
-                  userRole: 'Board Member' // Default role
+                  userRole: null // No role found
                 };
               }
             })
@@ -436,7 +454,7 @@ const getWorkspaceMembersWithRoles = async (workspaceId, subscriptionId) => {
             lastName: member.lastName,
             email: member.email,
             profilePicture: member.profilePicture || null,
-            workspaceRole: workspaceRoles.length > 0 ? workspaceRoles[0].roleTemplateName : 'Workspace Member',
+            workspaceRole: workspaceRoles.length > 0 ? workspaceRoles[0].roleTemplateName : null,
             boards: boardsWithRoles
           };
         } catch (error) {
@@ -453,7 +471,7 @@ const getWorkspaceMembersWithRoles = async (workspaceId, subscriptionId) => {
             lastName: member.lastName,
             email: member.email,
             profilePicture: member.profilePicture || null,
-            workspaceRole: 'Workspace Member',
+            workspaceRole: null,
             boards: []
           };
         }
