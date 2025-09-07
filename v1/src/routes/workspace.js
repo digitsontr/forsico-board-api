@@ -48,7 +48,7 @@ router.get(
   "/:workspaceId/members-with-roles",
   verifyWorkspace(),
   authorize(),
-  requirePermission(WORKSPACE_PERMISSIONS.USERS.VIEW, SCOPE_TYPES.WORKSPACE),
+  //requirePermission(WORKSPACE_PERMISSIONS.USERS.VIEW, SCOPE_TYPES.WORKSPACE),
   getWorkspaceMembersWithRoles
 );
 

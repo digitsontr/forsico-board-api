@@ -28,7 +28,7 @@ router.get(
   verifyWorkspace(),
   authorize(),
   validate(validations.getTasksOfBoardValidation),
-  requirePermission(BOARD_PERMISSIONS.TASKS.VIEW, SCOPE_TYPES.BOARD),
+  //requirePermission(BOARD_PERMISSIONS.TASKS.VIEW, SCOPE_TYPES.BOARD),
   getTasksOfBoard
 );
 
@@ -37,7 +37,7 @@ router.get(
   "/getUserTasks",
   verifyWorkspace(),
   authorize(),
-  requirePermission(TASK_PERMISSIONS.VIEW, SCOPE_TYPES.WORKSPACE),
+  //requirePermission(TASK_PERMISSIONS.VIEW, SCOPE_TYPES.WORKSPACE),
   getUserTasks
 );
 
@@ -46,7 +46,7 @@ router.get(
   "/search",
   validate(validations.searchTaskValidation),
   authorize(),
-  requirePermission(TASK_PERMISSIONS.VIEW, SCOPE_TYPES.WORKSPACE),
+  //requirePermission(TASK_PERMISSIONS.VIEW, SCOPE_TYPES.WORKSPACE),
   search
 );
 
@@ -56,7 +56,7 @@ router.get(
   verifyWorkspace(),
   validate(validations.getTaskByIdValidation),
   authorize(),
-  requirePermission(TASK_PERMISSIONS.VIEW, SCOPE_TYPES.BOARD),
+  //requirePermission(TASK_PERMISSIONS.VIEW, SCOPE_TYPES.BOARD),
   getTaskById
 );
 
@@ -66,7 +66,7 @@ router.post(
   verifyWorkspace(),
   validate(validations.createTaskValidation),
   authorize(),
-  requirePermission(BOARD_PERMISSIONS.TASKS.CREATE, SCOPE_TYPES.BOARD),
+  //requirePermission(BOARD_PERMISSIONS.TASKS.CREATE, SCOPE_TYPES.BOARD),
   createTask
 );
 
@@ -76,7 +76,7 @@ router.put(
   verifyWorkspace(),
   validate(validations.updateTaskValidation),
   authorize(),
-  requirePermission(TASK_PERMISSIONS.UPDATE, SCOPE_TYPES.BOARD),
+  //requirePermission(TASK_PERMISSIONS.UPDATE, SCOPE_TYPES.BOARD),
   updateTask
 );
 
@@ -86,7 +86,7 @@ router.patch(
   verifyWorkspace(),
   validate(validations.updateTaskStatusValidation),
   authorize(),
-  requirePermission(TASK_PERMISSIONS.STATUS.UPDATE, SCOPE_TYPES.BOARD),
+  //requirePermission(TASK_PERMISSIONS.STATUS.UPDATE, SCOPE_TYPES.BOARD),
   updateTaskStatus
 );
 
@@ -96,7 +96,7 @@ router.delete(
   verifyWorkspace(),
   validate(validations.deleteTaskValidation),
   authorize(),
-  requirePermission(TASK_PERMISSIONS.DELETE, SCOPE_TYPES.BOARD),
+  //requirePermission(TASK_PERMISSIONS.DELETE, SCOPE_TYPES.BOARD),
   deleteTask
 );
 
@@ -107,7 +107,7 @@ router
     verifyWorkspace(),
     validate(validations.addMemberToTaskValidation),
     authorize(),
-    requirePermission(TASK_PERMISSIONS.ASSIGN, SCOPE_TYPES.BOARD),
+    //requirePermission(TASK_PERMISSIONS.ASSIGN, SCOPE_TYPES.BOARD),
     addMemberToTask
   );
 
@@ -116,7 +116,7 @@ router.patch(
   "/changeAssignee/:taskId",
   validate(validations.changeAssigneeValidation),
   authorize(),
-  requirePermission(TASK_PERMISSIONS.ASSIGN, SCOPE_TYPES.BOARD),
+  //requirePermission(TASK_PERMISSIONS.ASSIGN, SCOPE_TYPES.BOARD),
   changeAssignee
 );
 
@@ -127,7 +127,7 @@ router
     verifyWorkspace(),
     validate(validations.removeMemberFromTaskValidation),
     authorize(),
-    requirePermission(TASK_PERMISSIONS.ASSIGN, SCOPE_TYPES.BOARD),
+    //requirePermission(TASK_PERMISSIONS.ASSIGN, SCOPE_TYPES.BOARD),
     removeMemberFromTask
   );
 
@@ -137,7 +137,7 @@ router.patch(
   verifyWorkspace(),
   authorize(),
   validate(validations.changeBoardValidation),
-  requirePermission(BOARD_PERMISSIONS.TASKS.MOVE, SCOPE_TYPES.BOARD),
+  //requirePermission(BOARD_PERMISSIONS.TASKS.MOVE, SCOPE_TYPES.BOARD),
   changeTaskBoard
 );
 
