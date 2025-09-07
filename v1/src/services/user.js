@@ -13,7 +13,6 @@ const getUserById = async (userId) => {
     if (!userId) {
       return ApiResponse.fail([new ErrorDetail("User ID is required")]);
     }
-    //TODO addUserToBard issue fix
     const cacheKey = `user_${userId}`;
     const redisClient = await getRedisClient();
 

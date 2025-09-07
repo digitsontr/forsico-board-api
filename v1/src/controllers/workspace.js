@@ -1,8 +1,21 @@
 const httpStatus = require("http-status");
 const service = require("../services/workspace");
+const serviceBusClient = require("../services/serviceBusClient");
+const Logger = require("../scripts/logger/board");
 
 const getAllWorkspaces = async (req, res) => {
   const response = await service.getAllWorkspaces();
+
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
+    return;
+  }
+
+  res.status(httpStatus.BAD_REQUEST).send(response);
+};
+
+const getWorkspacesOfSubscription = async (req, res) => {
+  const response = await service.getWorkspacesOfSubscription(req.subscriptionId);
 
   if (response.status) {
     res.status(httpStatus.OK).send(response);
@@ -63,6 +76,26 @@ const addMemberToWorkspace = async (req, res) => {
   const response = await service.addMemberToWorkspace(req.workspaceId, req.body);
 
   if (response.status) {
+    // Send Service Bus message for role assignment
+    try {
+      await serviceBusClient.sendMemberAddedToWorkspace({
+        userId: req.body.userId,
+        workspaceId: req.workspaceId,
+        subscriptionId: req.subscriptionId
+      });
+
+      Logger.log('info', 'Member added to workspace - Service Bus message sent', {
+        userId: req.body.userId,
+        workspaceId: req.workspaceId
+      });
+    } catch (error) {
+      Logger.log('error', 'Failed to send Service Bus message for member added to workspace', {
+        error: error.message,
+        userId: req.body.userId,
+        workspaceId: req.workspaceId
+      });
+    }
+
     res.status(httpStatus.OK).send(response);
     return;
   }
@@ -75,6 +108,26 @@ const removeMemberFromWorkspace = async (req, res) => {
   const response = await service.removeMemberFromWorkspace(req.workspaceId, req.body.userId);
 
   if (response.status) {
+    // Send Service Bus message for role removal
+    try {
+      await serviceBusClient.sendMemberRemovedFromWorkspace({
+        userId: req.body.userId,
+        workspaceId: req.workspaceId,
+        subscriptionId: req.subscriptionId
+      });
+
+      Logger.log('info', 'Member removed from workspace - Service Bus message sent', {
+        userId: req.body.userId,
+        workspaceId: req.workspaceId
+      });
+    } catch (error) {
+      Logger.log('error', 'Failed to send Service Bus message for member removed from workspace', {
+        error: error.message,
+        userId: req.body.userId,
+        workspaceId: req.workspaceId
+      });
+    }
+
     res.status(httpStatus.OK).send(response);
     return;
   }
@@ -132,6 +185,17 @@ const getWorkspaceProgress = async (req, res) => {
   res.status(httpStatus.BAD_REQUEST).send(response);
 };
 
+const getWorkspaceMembersWithRoles = async (req, res) => {
+  const response = await service.getWorkspaceMembersWithRoles(req.params.workspaceId, req.subscriptionId);
+
+  if (response.status) {
+    res.status(httpStatus.OK).send(response);
+    return;
+  }
+
+  res.status(httpStatus.BAD_REQUEST).send(response);
+};
+
 module.exports = {
   getAllWorkspaces,
   getWorkspaceById,
@@ -143,5 +207,7 @@ module.exports = {
   removeMemberFromWorkspace,
   updateWorkspaceReadyStatus,
   updateWorkspaceProgress,
-  getWorkspaceProgress
+  getWorkspaceProgress,
+  getWorkspacesOfSubscription,
+  getWorkspaceMembersWithRoles
 };

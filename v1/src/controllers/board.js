@@ -1,5 +1,7 @@
 const httpStatus = require("http-status");
 const service = require("../services/board");
+const serviceBusClient = require("../services/serviceBusClient");
+const Logger = require("../scripts/logger/board");
 
 const getBoardsOfWorkspace = async (req, res) => {
   const response = await service.getBoardsOfWorkspace(req.workspaceId);
@@ -53,6 +55,28 @@ const addMemberToBoard = async (req, res) => {
   const response = await service.addMemberToBoard(req.params.boardId, req.body);
 
   if (response.status) {
+    // Send Service Bus message for role assignment
+    try {
+      await serviceBusClient.sendMemberAddedToBoard({
+        userId: req.body.userId,
+        boardId: req.params.boardId,
+        workspaceId: req.workspaceId,
+        subscriptionId: req.subscriptionId
+      });
+
+      Logger.log('info', 'Member added to board - Service Bus message sent', {
+        userId: req.body.userId,
+        boardId: req.params.boardId,
+        workspaceId: req.workspaceId
+      });
+    } catch (error) {
+      Logger.log('error', 'Failed to send Service Bus message for member added to board', {
+        error: error.message,
+        userId: req.body.userId,
+        boardId: req.params.boardId
+      });
+    }
+
     res.status(httpStatus.OK).send(response);
     return;
   }
@@ -64,6 +88,26 @@ const removeMemberFromBoard = async (req, res) => {
   const response = await service.removeMemberFromBoard(req.params.boardId, req.body.userId);
 
   if (response.status) {
+    // Send Service Bus message for role removal
+    try {
+      await serviceBusClient.sendMemberRemovedFromBoard({
+        userId: req.body.userId,
+        boardId: req.params.boardId,
+        subscriptionId: req.subscriptionId
+      });
+
+      Logger.log('info', 'Member removed from board - Service Bus message sent', {
+        userId: req.body.userId,
+        boardId: req.params.boardId
+      });
+    } catch (error) {
+      Logger.log('error', 'Failed to send Service Bus message for member removed from board', {
+        error: error.message,
+        userId: req.body.userId,
+        boardId: req.params.boardId
+      });
+    }
+
     res.status(httpStatus.OK).send(response);
     return;
   }

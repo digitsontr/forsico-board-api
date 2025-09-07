@@ -4,6 +4,7 @@ const config = require("./config");
 const loaders = require("./loaders");
 var cors = require("cors");
 const authenticate = require("./middlewares/authenticate");
+const messageBusService = require("./services/messageBusService");
 const {
 	WorkspaceRoutes,
 	BoardRoutes,
@@ -18,6 +19,7 @@ const {
 	InvitationRoutes,
 	SubscriptionRoutes,
 } = require("./routes");
+const RoleRoutes = require("./routes/roles");
 const cronJob = require("./scripts/helpers/cronJob");
 
 config();
@@ -52,7 +54,17 @@ app.use("/notification", NotificationRoutes);
 app.use("/putback", PutBackRoutes);
 app.use("/invitation", InvitationRoutes);
 app.use("/subscription", SubscriptionRoutes);
+app.use("/roles", RoleRoutes);
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.info(`Server works ON ${PORT}`);
+
+    // Initialize Message Bus Service
+    try {
+        await messageBusService.initializeSubscriptions();
+        console.info('Message Bus Service initialized successfully');
+    } catch (error) {
+        console.error('Failed to initialize Message Bus Service:', error.message);
+        // Continue without Service Bus if it fails
+    }
 });

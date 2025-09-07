@@ -4,6 +4,8 @@ const validate = require("../middlewares/validate");
 const validations = require("../validations/workspace");
 const authorize = require("../middlewares/authorize");
 const permissons = require("../scripts/helpers/permissions");
+const { requirePermission } = require("../middlewares/permission");
+const { WORKSPACE_PERMISSIONS, SCOPE_TYPES } = require("../constants/permissions");
 const {
   getWorkspaceById,
   getWorkspacesOfUser,
@@ -14,7 +16,9 @@ const {
   removeMemberFromWorkspace,
   updateWorkspaceReadyStatus,
   updateWorkspaceProgress,
-  getWorkspaceProgress
+  getWorkspaceProgress,
+  getWorkspacesOfSubscription,
+  getWorkspaceMembersWithRoles
 } = require("../controllers/workspace");
 const verifyWorkspace = require("../middlewares/verifyWorkspace");
 
@@ -30,6 +34,23 @@ router
     authorize(),
     addMemberToWorkspace
   );
+
+  router
+  .route("/getWorkspacesOfSubscription")
+  .post(
+    verifyWorkspace(),
+    authorize(),
+    getWorkspacesOfSubscription
+  );
+
+// Get workspace members with their roles and board memberships
+router.get(
+  "/:workspaceId/members-with-roles",
+  verifyWorkspace(),
+  authorize(),
+  requirePermission(WORKSPACE_PERMISSIONS.USERS.VIEW, SCOPE_TYPES.WORKSPACE),
+  getWorkspaceMembersWithRoles
+);
 
 router
   .route("/removeMemberFromWorkspace")

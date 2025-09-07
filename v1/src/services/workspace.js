@@ -1,11 +1,13 @@
 const { Workspace, WorkspaceProgressState } = require("../models/workspace");
 const User = require("../models/user");
+const { Board } = require("../models/board");
 const mongoose = require("mongoose");
 const { ApiResponse, ErrorDetail } = require("../models/apiResponse");
 const ExceptionLogger = require("../scripts/logger/exception");
 const Logger = require("../scripts/logger/workspace");
 const boardService = require("./board");
 const { v4: uuidv4 } = require("uuid");
+const roleServiceClient = require("./roleServiceClient");
 
 const getAllWorkspaces = async () => {
   try {
@@ -51,6 +53,22 @@ const getWorkspacesOfUser = async (user, subscriptionId) => {
       ],
     });
 
+    return ApiResponse.success(workspaces);
+  } catch (e) {
+    console.error(e);
+    return ApiResponse.fail([new ErrorDetail("Failed to retrieve workspaces")]);
+  }
+};
+
+const getWorkspacesOfSubscription = async (subscriptionId) => {
+  try {
+    const workspaces = await Workspace.find(
+      {
+        subscriptionId: subscriptionId,
+        isDeleted: false,
+      },
+      "name _id"
+    );
     return ApiResponse.success(workspaces);
   } catch (e) {
     console.error(e);
@@ -337,6 +355,128 @@ const getWorkspaceProgress = async (workspaceId) => {
   }
 };
 
+const getWorkspaceMembersWithRoles = async (workspaceId, subscriptionId) => {
+  try {
+    // 1. Get workspace with members and boards
+    const workspace = await Workspace.findOne({
+      _id: workspaceId,
+      subscriptionId: subscriptionId,
+      isDeleted: false
+    }).populate('members', 'id firstName lastName email profilePicture')
+      .populate('boards', '_id name');
+
+    if (!workspace) {
+      return ApiResponse.fail([new ErrorDetail("Workspace not found")]);
+    }
+
+    // 2. Get all workspace members
+    const workspaceMembers = workspace.members;
+
+    if (!workspaceMembers || workspaceMembers.length === 0) {
+      return ApiResponse.success([]);
+    }
+
+    // 3. Get all boards in workspace
+    const workspaceBoards = workspace.boards;
+
+    // 4. For each member, get their roles and board memberships
+    const membersWithRoles = await Promise.all(
+      workspaceMembers.map(async (member) => {
+        try {
+          // Get workspace role from role service
+          const workspaceRoles = await roleServiceClient.getUserRolesByScope({
+            userId: member.id,
+            subscriptionId: subscriptionId,
+            scopeType: 'workspace',
+            scopeId: workspaceId
+          });
+
+          // Get user's board memberships
+          const userBoards = await Board.find({
+            _id: { $in: workspaceBoards.map(b => b._id) },
+            members: member.id,
+            isDeleted: false
+          }, '_id name');
+
+          // Get board roles for each board
+          const boardsWithRoles = await Promise.all(
+            userBoards.map(async (board) => {
+              try {
+                const boardRoles = await roleServiceClient.getUserRolesByScope({
+                  userId: member.id,
+                  subscriptionId: subscriptionId,
+                  scopeType: 'board',
+                  scopeId: board._id.toString()
+                });
+
+                return {
+                  boardId: board._id.toString(),
+                  boardName: board.name,
+                  userRole: boardRoles.length > 0 ? boardRoles[0].roleTemplateName : 'Board Member'
+                };
+              } catch (error) {
+                Logger.log('error', 'Error getting board role', {
+                  error: error.message,
+                  userId: member.id,
+                  boardId: board._id
+                });
+
+                return {
+                  boardId: board._id.toString(),
+                  boardName: board.name,
+                  userRole: 'Board Member' // Default role
+                };
+              }
+            })
+          );
+
+          return {
+            userId: member.id,
+            firstName: member.firstName,
+            lastName: member.lastName,
+            email: member.email,
+            profilePicture: member.profilePicture || null,
+            workspaceRole: workspaceRoles.length > 0 ? workspaceRoles[0].roleTemplateName : 'Workspace Member',
+            boards: boardsWithRoles
+          };
+        } catch (error) {
+          Logger.log('error', 'Error processing member roles', {
+            error: error.message,
+            userId: member.id,
+            workspaceId
+          });
+
+          // Return member with default roles if role service fails
+          return {
+            userId: member.id,
+            firstName: member.firstName,
+            lastName: member.lastName,
+            email: member.email,
+            profilePicture: member.profilePicture || null,
+            workspaceRole: 'Workspace Member',
+            boards: []
+          };
+        }
+      })
+    );
+
+    Logger.log('info', 'Retrieved workspace members with roles', {
+      workspaceId,
+      memberCount: membersWithRoles.length
+    });
+
+    return ApiResponse.success(membersWithRoles);
+  } catch (error) {
+    Logger.log('error', 'Error getting workspace members with roles', {
+      error: error.message,
+      workspaceId,
+      subscriptionId
+    });
+
+    return ApiResponse.fail([new ErrorDetail("Failed to retrieve workspace members with roles")]);
+  }
+};
+
 module.exports = {
   getAllWorkspaces,
   getWorkspaceById,
@@ -348,5 +488,7 @@ module.exports = {
   removeMemberFromWorkspace,
   updateWorkspaceReadyStatus,
   updateWorkspaceProgress,
-  getWorkspaceProgress
+  getWorkspaceProgress,
+  getWorkspacesOfSubscription,
+  getWorkspaceMembersWithRoles
 };

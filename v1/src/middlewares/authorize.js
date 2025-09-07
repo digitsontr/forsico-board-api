@@ -5,6 +5,7 @@ const { FORBIDDEN, UNAUTHORIZED } = require("http-status");
 const { Workspace } = require("../models/workspace");
 const User = require("../models/user");
 const ExceptionLogger = require("../scripts/logger/exception");
+const Logger = require("../scripts/logger/board");
 
 const authorize = (permission) => async (req, res, next) => {
   try {
@@ -119,10 +120,34 @@ const authorize = (permission) => async (req, res, next) => {
     }
 
 
+    // Add authorization context to request for downstream middleware
     req.subscriptionId = subscriptionId;
+    req.workspaceId = workspaceId;
+    req.authContext = {
+      user: user,
+      subscriptionId: subscriptionId,
+      workspaceId: workspaceId,
+      subscriptionLimits: subscriptionCheck.limits
+    };
+
+    Logger.log('debug', 'Basic authorization successful', {
+      userId: user.id,
+      subscriptionId,
+      workspaceId,
+      path: req.path,
+      method: req.method
+    });
+
     return next();
   } catch (error) {
     ExceptionLogger.error("Authorization error:", error);
+    Logger.log('error', 'Authorization middleware error', {
+      error: error.message,
+      path: req.path,
+      method: req.method,
+      userId: req.user?.sub
+    });
+
     return res
       .status(FORBIDDEN)
       .json(ApiResponse.fail([new ErrorDetail("Authorization failed")]));
